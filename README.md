@@ -60,3 +60,25 @@ const reader = response.body.getReader();
 ```
 This parsed data is then used to update the DOM elements and draw the dynamic `<canvas>` line chart.
 
+## SSE vs WebSockets vs Polling
+
+| Feature | Server-Sent Events (SSE) | WebSockets | Polling / Long Polling |
+| :--- | :--- | :--- | :--- |
+| **Communication** | Unidirectional (Server → Client) | Full-duplex / Bidirectional | Unidirectional (Client pulls) |
+| **Protocol** | Standard HTTP / HTTP/2 | `ws://` / `wss://` (TCP handshake) | Standard HTTP |
+| **Data Format** | UTF-8 Text / JSON | Binary & Text | Any HTTP payload |
+| **Reconnection** | Built-in automatic reconnection | Must be manually implemented | Handled by interval / request |
+| **Complexity** | Very low (simple HTTP endpoint) | Moderate / High (socket state) | Low (inefficient over time) |
+| **Firewall & Proxy**| Works out of the box with proxies | May require special proxy configs | Standard HTTP |
+
+## SSE Protocol Specification
+
+SSE streams communicate through simple plaintext blocks separated by a pair of newlines (`\n\n`). Each event can contain the following fields:
+
+- `data: <content>` — Payload for the event. Multiple consecutive `data:` lines are concatenated with newlines.
+- `id: <id>` — Unique identifier for the event. The browser stores this as `Last-Event-ID` and sends it back in headers on reconnect.
+- `event: <name>` — Custom event type (allows client-side dispatching like `addEventListener('my-event', ...)`).
+- `retry: <milliseconds>` — Suggested reconnect timeout for the client if the connection drops.
+- `: <comment>` — Lines starting with a colon are ignored by parsers and can be used for keep-alive heartbeats.
+
+
