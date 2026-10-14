@@ -1,0 +1,22 @@
+{
+  "name": "raw-sse-hub",
+  "version": "2.0.0",
+  "description": "Production-grade Server-Sent Events (SSE) showcase featuring multi-event streams, Last-Event-ID replay, telemetry, and live dark-mode trading dashboard.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [
+    "sse",
+    "server-sent-events",
+    "eventsource",
+    "real-time",
+    "streaming",
+    "http-streaming",
+    "vanilla-js",
+    "node"
+  ],
+  "author": "HxWildE",
+  "license": "MIT"
+}

@@ -1,84 +1,140 @@
-# Raw SSE (Server-Sent Events) Demo
+# ⚡ Raw SSE Hub v2.0 (Server-Sent Events)
 
-This project is a simple demonstration of Server-Sent Events (SSE) using vanilla JavaScript and Node.js. It features a live price tracker that updates a graph in real-time without the need for WebSockets or continuous polling.
+An enterprise-grade, zero-dependency demonstration of **Server-Sent Events (SSE)** using vanilla Node.js and client-side JavaScript. 
 
-## What are Server-Sent Events (SSE)?
+Features a real-time multi-asset financial ticker, live SVG/Canvas chart station, server telemetry HUD, interactive protocol inspector, and automatic reconnection recovery using the **`Last-Event-ID`** ring-buffer replay mechanism.
 
-Server-Sent Events (SSE) is a server push technology enabling a client to receive automatic updates from a server via a persistent HTTP connection. It's ideal for one-way communication where the server needs to frequently send data to the client, such as live stock prices, news feeds, or social media updates.
+---
 
-**Key characteristics of SSE:**
-- **Unidirectional:** Data flows from server to client only.
-- **Text-based:** Uses the `text/event-stream` content type.
-- **Built on HTTP:** Works over standard HTTP/HTTPS connections.
-- **Lightweight:** Easier to implement than WebSockets for one-way data flow.
+## 🌟 What's New in v2.0
 
-## Project Structure
+- 🔀 **Multi-Channel SSE Event Streams (`event: <type>`)**:
+  - `event: ticker` — Real-time price quotes for multiple assets (BTC, ETH, SOL, NVDA) with delta, 24h change %, and volume.
+  - `event: telemetry` — Server health metrics (active client count, uptime, heap memory, events pushed).
+  - `event: alert` — Market volatility triggers, resistance milestones, and whale transaction warnings.
+  - `event: broadcast` — Real-time client-to-client broadcasts pushed across all active SSE subscribers.
+  - `event: connected` — Handshake packet providing client ID and server snapshot upon initial connection.
+- 🔁 **`Last-Event-ID` Reconnection Recovery**:
+  - In-memory event ring-buffer stores recent packets.
+  - If a client's connection drops, the browser sends its `Last-Event-ID` header upon reconnect, and the server automatically replays all missed events without data loss.
+  - Includes an interactive **"Simulate Reconnect & Replay"** button in the UI.
+- 🎛️ **Dual SSE Transport Modes**:
+  - **Native `EventSource` Mode**: Standard W3C `EventSource` with typed event listeners (`addEventListener('ticker', ...)`).
+  - **Raw `fetch()` Stream Reader Mode**: Low-level stream reader using `ReadableStreamDefaultReader` + `TextDecoder` to demonstrate manual chunk buffer parsing and line separation.
+- 📡 **Live Wire Protocol Inspector**:
+  - Real-time syntax-colored terminal displaying actual HTTP chunk frames arriving over the wire (`id:`, `event:`, `retry:`, `data:`, `: heartbeat`).
+- 📈 **Dynamic Retina Canvas Chart**:
+  - Smooth Bezier curves, neon gradient area fill, live price beacon, customizable window (30/60/100 ticks).
+- 💓 **Proxy Keep-Alive Heartbeats**:
+  - Periodic comment frames (`: keep-alive <timestamp>\n\n`) to prevent connection timeouts from proxies and firewalls.
+- 🚀 **Zero External Dependencies**:
+  - Built purely with standard Node.js built-ins (`http`, `fs`, `url`, `path`). No `express`, `socket.io`, or `npm install` needed.
 
-- `index.js`: A lightweight Node.js HTTP server that serves the frontend and handles the SSE endpoint (`/events`).
-- `index.html`: The frontend client that connects to the SSE stream, parses the incoming data, and renders a live line chart and log.
+---
 
-## Prerequisites
+## 🏗️ Architecture & How It Works
 
-- [Node.js](https://nodejs.org/) installed on your machine.
+```
+                        ┌────────────────────────────────────────────────────────┐
+                        │                   Node.js Server                       │
+                        │                 (Zero Dependencies)                    │
+                        │                                                        │
+                        │   ┌────────────────────────────────────────────────┐   │
+                        │   │         Sliding Ring Buffer (200 pkts)         │   │
+                        │   │  [id:1] [id:2] ... [id:41] [id:42] ... [id:N]  │   │
+                        │   └────────────────────────────────────────────────┘   │
+                        │                           │                            │
+                        └───────────────────────────┼────────────────────────────┘
+                                                    │
+                                     HTTP GET /events
+                         Content-Type: text/event-stream; charset=utf-8
+                         Cache-Control: no-cache, no-transform
+                         Connection: keep-alive
+                                                    │
+                   ┌────────────────────────────────┼────────────────────────────────┐
+                   ▼                                                                 ▼
+      ┌─────────────────────────┐                                       ┌─────────────────────────┐
+      │   Client A (Browser)    │                                       │   Client B (Browser)    │
+      │   Native EventSource    │                                       │   Raw fetch() Stream    │
+      │                         │                                       │                         │
+      │ • Auto-reconnect        │                                       │ • ReadableStream reader │
+      │ • Last-Event-ID header  │                                       │ • Manual \n\n parser    │
+      │ • Typed listeners       │                                       │ • Wire protocol viewer  │
+      └─────────────────────────┘                                       └─────────────────────────┘
+```
 
-## Setup and Run Guide
+---
 
-1. **Open your terminal** and navigate to the project directory:
+## ⚡ The SSE Wire Protocol Format
+
+SSE streams are simple plaintext messages delimited by double newlines (`\n\n`). Each packet can contain any combination of:
+
+| Field | Purpose | Example |
+| :--- | :--- | :--- |
+| `data: <payload>` | The payload data. Multi-line data lines are joined with newlines. | `data: {"symbol":"BTC","price":67420}` |
+| `id: <uniqueId>` | Monotonic event identifier. Stored by the client as `Last-Event-ID`. | `id: 104` |
+| `event: <name>` | Custom event type for client-side event dispatching. | `event: ticker` |
+| `retry: <ms>` | Reconnection delay in milliseconds if the stream is interrupted. | `retry: 2500` |
+| `: <comment>` | Lines starting with a colon are comments, used for keep-alive pings. | `: keep-alive 2026-10-15T00:00:00Z` |
+
+---
+
+## 🆚 SSE vs WebSockets vs HTTP Polling
+
+| Feature | Server-Sent Events (SSE) | WebSockets | HTTP Polling |
+| :--- | :--- | :--- | :--- |
+| **Direction** | Unidirectional (Server → Client) | Full-Duplex (Bidirectional) | Client pulls updates |
+| **Protocol** | Standard HTTP / HTTP/2 | `ws://` / `wss://` (TCP upgrade) | Standard HTTP |
+| **Automatic Reconnect** | Built-in native browser support | Must be manually implemented | Handled per request |
+| **Resumption on Drop** | Built-in via `Last-Event-ID` | Custom application protocol | None (must pass timestamp) |
+| **Firewall & Proxy** | Works seamlessly through proxies | May require custom proxy config | Works everywhere |
+| **Transport Overhead** | Very low (simple text frames) | Low framing overhead | Very high (repeated HTTP headers)|
+| **Complexity** | Minimal (Standard HTTP endpoint) | Moderate to High | Low initially, bad at scale |
+
+---
+
+## 🚀 Quick Start Guide
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v16 or newer).
+
+### Running the Application
+
+1. **Clone & Navigate:**
    ```bash
-   cd path/to/SSE
+   git clone https://github.com/HxWildE/SSE.git
+   cd SSE
    ```
 
-2. **Run the server** using Node.js. (Note: There are no external dependencies like `express` to install, as it uses the built-in `http` module).
+2. **Start the server:**
    ```bash
    node index.js
+   # or with npm
+   npm start
    ```
 
-3. **Open your browser** and visit:
-   ```text
-   http://localhost:3000
-   ```
+3. **Open in Browser:**
+   Visit [`http://localhost:3000`](http://localhost:3000)
 
-## How it Works in this Project
+---
 
-### Server-side (`index.js`)
-When a client requests `/events`, the server responds with specific headers to establish the SSE connection and keep it open:
-```javascript
-res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive"
-});
-```
-It then uses `setInterval` to push a new JSON string formatted with the `data: ` prefix and ending with `\n\n` (the SSE standard format) every second.
+## 🧪 Interactive Features to Try
 
-### Client-side (`index.html`)
-The frontend uses the `fetch` API and a `TextDecoder` to read the raw chunked data stream instead of the standard `EventSource` API, giving a closer look at how the protocol works under the hood:
-```javascript
-const response = await fetch("/events");
-const reader = response.body.getReader();
-// ... loop to read chunks, parse the buffer by \n\n, and extract JSON
-```
-This parsed data is then used to update the DOM elements and draw the dynamic `<canvas>` line chart.
+1. **Simulate Network Drop & Replay:**
+   - Click the **"Simulate Reconnect & Replay"** button in the header.
+   - The client disconnects for 3 seconds while the server keeps ticking.
+   - Upon reconnecting, the client presents its `Last-Event-ID` and the server replays all missed events from the buffer.
+2. **Switch Transport Modes:**
+   - Click between **"EventSource API"** and **"Fetch Stream Reader"** to inspect how both browser APIs interact with the raw SSE stream.
+3. **Trigger Market Shocks:**
+   - Click **"Spike +5.5%"** or **"Drop -5.5%"** to dispatch an instant reactive surge and priority alert across all connected subscribers.
+4. **Push Live Broadcasts:**
+   - Type a message in the console and hit **"Send"** (`POST /api/broadcast`) to see it instantly pop up on all connected screens via `event: broadcast`.
+5. **Inspect Raw Wire Protocol:**
+   - Watch the raw wire stream box to see exact chunk frames arriving over HTTP in real time.
 
-## SSE vs WebSockets vs Polling
+---
 
-| Feature | Server-Sent Events (SSE) | WebSockets | Polling / Long Polling |
-| :--- | :--- | :--- | :--- |
-| **Communication** | Unidirectional (Server → Client) | Full-duplex / Bidirectional | Unidirectional (Client pulls) |
-| **Protocol** | Standard HTTP / HTTP/2 | `ws://` / `wss://` (TCP handshake) | Standard HTTP |
-| **Data Format** | UTF-8 Text / JSON | Binary & Text | Any HTTP payload |
-| **Reconnection** | Built-in automatic reconnection | Must be manually implemented | Handled by interval / request |
-| **Complexity** | Very low (simple HTTP endpoint) | Moderate / High (socket state) | Low (inefficient over time) |
-| **Firewall & Proxy**| Works out of the box with proxies | May require special proxy configs | Standard HTTP |
+## 📜 License
 
-## SSE Protocol Specification
-
-SSE streams communicate through simple plaintext blocks separated by a pair of newlines (`\n\n`). Each event can contain the following fields:
-
-- `data: <content>` — Payload for the event. Multiple consecutive `data:` lines are concatenated with newlines.
-- `id: <id>` — Unique identifier for the event. The browser stores this as `Last-Event-ID` and sends it back in headers on reconnect.
-- `event: <name>` — Custom event type (allows client-side dispatching like `addEventListener('my-event', ...)`).
-- `retry: <milliseconds>` — Suggested reconnect timeout for the client if the connection drops.
-- `: <comment>` — Lines starting with a colon are ignored by parsers and can be used for keep-alive heartbeats.
-
-
+MIT License. Free to use, modify, and distribute for personal or commercial projects.
