@@ -8,11 +8,14 @@ A resilient, testable, and idempotent data engineering pipeline in Python that e
 
 Air pollution is a critical public health and environmental challenge across urban India. While atmospheric models and monitoring stations produce massive streams of air quality measurements, raw API payloads frequently contain sensor anomalies, missing readings, inconsistent timestamp representations, and nested JSON structures.
 
-This project implements a complete, decoupled **Extract, Transform, Load (ETL)** pipeline designed around core data engineering principles:
+This project implements an end-to-end data engineering, analytics, and machine learning system designed around core production principles:
 - **Resilient Ingestion**: Bounded exponential backoff retries, explicit timeouts, and HTTP 429 rate-limit awareness (`Retry-After`).
 - **Data Quality & Governance**: Strict boundary validation, timezone normalization (IST to UTC), quarantine routing for defective observations, and a zero-imputation policy for missing measurements.
 - **Relational Idempotency**: Natural composite unique keys `(city, timestamp_utc)` and upsert semantics guarantee that re-running ingestion never duplicates database records.
-- **Test-Driven Architecture**: 24 automated unit and integration tests using offline mocks and sanitized fixtures, plus an optional bounded live smoke test.
+- **SQL Trend Analytics**: Automated SQL window functions tracking city pollutant trends, diurnal distributions, and PM2.5/PM10 physical mass ratios.
+- **ML Anomaly Detection**: Unsupervised `IsolationForest` model (Scikit-learn) isolating multivariate outliers, extreme spikes, and optical sensor baseline inversions.
+- **Interactive Streamlit Dashboard**: Full-stack dark-mode web dashboard (`app.py`) for live monitoring, interactive map filtering, and anomaly visualization.
+- **Test-Driven Architecture**: 27 automated unit and integration tests using offline mocks and sanitized fixtures, plus an optional bounded live smoke test.
 
 ---
 
@@ -35,15 +38,24 @@ This project implements a complete, decoupled **Extract, Transform, Load (ETL)**
                                             ▼
                              [ SQLite: `aqi_observations` ]
                                UNIQUE(city, timestamp_utc)
-                                            ▲
-                                            │
-                             [ Audit: `pipeline_runs` ]
+                                       │            ▲
+                                       ▼            │
+                         [ SQL Analytics Module ]   [ Audit: `pipeline_runs` ]
+                                       │
+                                       ▼
+                       [ Scikit-Learn Anomaly Detection ]
+                                       │
+                                       ▼
+                     [ Interactive Streamlit Dashboard (app.py) ]
 ```
 
 ### Detailed Sequence:
 1. **Extract (`extract.py`)**: Fetches air quality observations for New Delhi, Mumbai, Bengaluru, Kolkata, Chennai, Hyderabad, Ahmedabad, and Lucknow. Enforces request timeouts and exponential backoff on transient errors (5xx, timeouts) while immediately aborting on permanent client errors (4xx).
 2. **Transform (`transform.py`)**: Parses Indian Standard Time (IST, UTC+05:30) timestamps into ISO-8601 UTC strings. Applies physical boundary checks ($0 \le \text{PM2.5} \le 1000\,\mu\text{g/m}^3$). Segregates defective records into a quarantine list with exact rejection reasons. Preserves missing metrics as `NULL` (never replaces with `0.0`).
 3. **Load (`load.py`)**: Executes an idempotent upsert (`INSERT ... ON CONFLICT DO UPDATE`) into `aqi_observations` within an atomic transaction. Logs execution metrics and status into `pipeline_runs`.
+4. **Analyze (`analytics.py`)**: Executes SQL queries to compute multi-city rolling averages, PM2.5/PM10 mass ratios, and pipeline data quality health rates.
+5. **Detect Anomalies (`anomaly.py`)**: Standardizes 6 atmospheric features and fits a Scikit-learn `IsolationForest` model to detect unusual multivariate pollution events and sensor glitches.
+6. **Visualize (`app.py`)**: Serves an interactive Streamlit dashboard displaying geographic city maps, trend charts, and flagged anomaly scatter plots.
 
 ---
 
@@ -54,6 +66,10 @@ This project implements a complete, decoupled **Extract, Transform, Load (ETL)**
 | **Language** | Python 3.9+ | Standard language for data engineering, rich HTTP ecosystem, and native SQLite support. |
 | **HTTP Client** | `requests` | Battle-tested session management, connection pooling, and header inspection. |
 | **Storage** | SQLite | Lightweight, zero-configuration, self-contained relational database supporting ACID transactions and upsert syntax. |
+| **Data Processing** | `pandas` | High-performance tabular data structures and window aggregation. |
+| **Machine Learning**| `scikit-learn` | Unsupervised `IsolationForest` for multi-pollutant statistical anomaly detection. |
+| **Web Dashboard** | `streamlit` | Reactive data dashboard visualizing maps, trends, and outliers. |
+| **Visualizations** | `altair` | Declarative statistical charting for multi-pollutant correlations. |
 | **Validation** | Python Dataclasses | Type-safe data containers with zero runtime framework overhead. |
 | **Configuration** | `python-dotenv` | Twelve-Factor App methodology; keeps credentials and knobs outside source code. |
 | **Testing** | `pytest` | Flexible test runner supporting fixtures, parametric testing, and isolated temporary directories. |
@@ -122,14 +138,20 @@ cp .env.example .env
 
 ## 6. Execution Commands
 
-### 1. Run in Offline Fixture Mode (Zero Network / Zero Quota)
+### 1. Launch the Interactive Streamlit Dashboard
+```bash
+python -m streamlit run app.py
+```
+Opens the interactive web dashboard displaying real-time city maps, SQL trend analytics, Scikit-learn anomaly scatter plots, and live pipeline triggers.
+
+### 2. Run in Offline Fixture Mode (Zero Network / Zero Quota)
 Ingests pre-sanitized historical observations from `tests/fixtures/batch_cities_response.json`:
 
 ```bash
 python -m aqi_pipeline.pipeline --mode fixture --show-recent
 ```
 
-### 2. Verify Idempotency
+### 3. Verify Idempotency
 Execute the exact same command a second time:
 
 ```bash
@@ -137,7 +159,7 @@ python -m aqi_pipeline.pipeline --mode fixture --show-recent
 ```
 Notice that `Database Inserts: 0` and `Database Updates: 6`. Total database rows remain unchanged.
 
-### 3. Run in Live Mode (Real External API)
+### 4. Run in Live Mode (Real External API)
 ```bash
 # Ingest live observations for all configured Indian cities:
 python -m aqi_pipeline.pipeline --mode live --show-recent
@@ -236,7 +258,12 @@ python -m pytest -v
 python -m pytest -v --run-live tests/test_live_smoke.py
 ```
 
-### Verified Test Suite Breakdown (24 Automated + 1 Live Smoke):
+### Verified Test Suite Breakdown (27 Automated + 1 Live Smoke):
+- `tests/test_analytics.py`:
+  - `test_analytics_metrics_and_summary` (SQL window aggregations, PM2.5/PM10 ratio logic, data quality health audits)
+- `tests/test_anomaly.py`:
+  - `test_anomaly_detection_with_outlier` (Scikit-learn Isolation Forest multi-pollutant outlier detection)
+  - `test_domain_rule_pm_inversion_detected` (Atmospheric optical sensor PM2.5 > PM10 inversion rule check)
 - `tests/test_extract.py`:
   - `test_fetch_city_success_mocked` (HTTP 200 payload ingestion & metadata tagging)
   - `test_fetch_city_rate_limit_with_retry_after` (HTTP 429 backoff & header parsing)
