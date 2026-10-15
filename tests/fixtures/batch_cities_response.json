@@ -1,0 +1,170 @@
+{
+  "New Delhi": {
+    "latitude": 28.6139,
+    "longitude": 77.2090,
+    "timezone": "Asia/Kolkata",
+    "timezone_abbreviation": "IST",
+    "elevation": 214.0,
+    "current_units": {
+      "time": "iso8601",
+      "pm10": "μg/m³",
+      "pm2_5": "μg/m³",
+      "carbon_monoxide": "μg/m³",
+      "nitrogen_dioxide": "μg/m³",
+      "sulphur_dioxide": "μg/m³",
+      "ozone": "μg/m³",
+      "us_aqi": "USAQI"
+    },
+    "current": {
+      "time": "2026-10-15T22:30",
+      "interval": 3600,
+      "pm10": 106.2,
+      "pm2_5": 95.7,
+      "carbon_monoxide": 1674.0,
+      "nitrogen_dioxide": 79.5,
+      "sulphur_dioxide": 41.9,
+      "ozone": 27.0,
+      "us_aqi": 158
+    }
+  },
+  "Mumbai": {
+    "latitude": 19.0760,
+    "longitude": 72.8777,
+    "timezone": "Asia/Kolkata",
+    "timezone_abbreviation": "IST",
+    "elevation": 14.0,
+    "current_units": {
+      "time": "iso8601",
+      "pm10": "μg/m³",
+      "pm2_5": "μg/m³",
+      "carbon_monoxide": "μg/m³",
+      "nitrogen_dioxide": "μg/m³",
+      "sulphur_dioxide": "μg/m³",
+      "ozone": "μg/m³",
+      "us_aqi": "USAQI"
+    },
+    "current": {
+      "time": "2026-10-15T22:30",
+      "interval": 3600,
+      "pm10": 78.4,
+      "pm2_5": 52.1,
+      "carbon_monoxide": 840.5,
+      "nitrogen_dioxide": 42.1,
+      "sulphur_dioxide": 18.3,
+      "ozone": 34.2,
+      "us_aqi": 95
+    }
+  },
+  "Bengaluru": {
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "timezone": "Asia/Kolkata",
+    "timezone_abbreviation": "IST",
+    "elevation": 920.0,
+    "current_units": {
+      "time": "iso8601",
+      "pm10": "μg/m³",
+      "pm2_5": "μg/m³",
+      "carbon_monoxide": "μg/m³",
+      "nitrogen_dioxide": "μg/m³",
+      "sulphur_dioxide": "μg/m³",
+      "ozone": "μg/m³",
+      "us_aqi": "USAQI"
+    },
+    "current": {
+      "time": "2026-10-15T22:30",
+      "interval": 3600,
+      "pm10": 45.0,
+      "pm2_5": 24.3,
+      "carbon_monoxide": 520.0,
+      "nitrogen_dioxide": 28.4,
+      "sulphur_dioxide": 8.7,
+      "ozone": 41.5,
+      "us_aqi": 51
+    }
+  },
+  "Kolkata": {
+    "latitude": 22.5726,
+    "longitude": 88.3639,
+    "timezone": "Asia/Kolkata",
+    "timezone_abbreviation": "IST",
+    "elevation": 9.0,
+    "current_units": {
+      "time": "iso8601",
+      "pm10": "μg/m³",
+      "pm2_5": "μg/m³",
+      "carbon_monoxide": "μg/m³",
+      "nitrogen_dioxide": "μg/m³",
+      "sulphur_dioxide": "μg/m³",
+      "ozone": "μg/m³",
+      "us_aqi": "USAQI"
+    },
+    "current": {
+      "time": "2026-10-15T22:30",
+      "interval": 3600,
+      "pm10": 115.8,
+      "pm2_5": 82.0,
+      "carbon_monoxide": 1210.0,
+      "nitrogen_dioxide": 61.2,
+      "sulphur_dioxide": 22.4,
+      "ozone": 19.8,
+      "us_aqi": 142
+    }
+  },
+  "Chennai": {
+    "latitude": 13.0827,
+    "longitude": 80.2707,
+    "timezone": "Asia/Kolkata",
+    "timezone_abbreviation": "IST",
+    "elevation": 6.0,
+    "current_units": {
+      "time": "iso8601",
+      "pm10": "μg/m³",
+      "pm2_5": "μg/m³",
+      "carbon_monoxide": "μg/m³",
+      "nitrogen_dioxide": "μg/m³",
+      "sulphur_dioxide": "μg/m³",
+      "ozone": "μg/m³",
+      "us_aqi": "USAQI"
+    },
+    "current": {
+      "time": "2026-10-15T22:30",
+      "interval": 3600,
+      "pm10": 58.6,
+      "pm2_5": 31.0,
+      "carbon_monoxide": 610.0,
+      "nitrogen_dioxide": 30.5,
+      "sulphur_dioxide": 12.1,
+      "ozone": 38.0,
+      "us_aqi": 68
+    }
+  },
+  "Hyderabad": {
+    "latitude": 17.3850,
+    "longitude": 78.4867,
+    "timezone": "Asia/Kolkata",
+    "timezone_abbreviation": "IST",
+    "elevation": 542.0,
+    "current_units": {
+      "time": "iso8601",
+      "pm10": "μg/m³",
+      "pm2_5": "μg/m³",
+      "carbon_monoxide": "μg/m³",
+      "nitrogen_dioxide": "μg/m³",
+      "sulphur_dioxide": "μg/m³",
+      "ozone": "μg/m³",
+      "us_aqi": "USAQI"
+    },
+    "current": {
+      "time": "2026-10-15T22:30",
+      "interval": 3600,
+      "pm10": 85.3,
+      "pm2_5": 48.7,
+      "carbon_monoxide": 790.0,
+      "nitrogen_dioxide": 39.4,
+      "sulphur_dioxide": 14.5,
+      "ozone": 31.2,
+      "us_aqi": 89
+    }
+  }
+}

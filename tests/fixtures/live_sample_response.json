@@ -1,0 +1,31 @@
+{
+  "latitude": 28.599998,
+  "longitude": 77.20001,
+  "generationtime_ms": 0.3217,
+  "utc_offset_seconds": 19800,
+  "timezone": "Asia/Kolkata",
+  "timezone_abbreviation": "GMT+5:30",
+  "elevation": 214.0,
+  "current_units": {
+    "time": "iso8601",
+    "interval": "seconds",
+    "pm10": "μg/m³",
+    "pm2_5": "μg/m³",
+    "carbon_monoxide": "μg/m³",
+    "nitrogen_dioxide": "μg/m³",
+    "sulphur_dioxide": "μg/m³",
+    "ozone": "μg/m³",
+    "us_aqi": "USAQI"
+  },
+  "current": {
+    "time": "2026-10-15T22:30",
+    "interval": 3600,
+    "pm10": 106.2,
+    "pm2_5": 95.7,
+    "carbon_monoxide": 1674.0,
+    "nitrogen_dioxide": 79.5,
+    "sulphur_dioxide": 41.9,
+    "ozone": 27.0,
+    "us_aqi": 158
+  }
+}

@@ -1,3 +1,68 @@
-OALAB
-scratch/
+# Secrets and Environment Variables
+.env
+.env.*
+!.env.example
+
+# Private Local Learning Curriculum (kept locally, excluded from public repo)
+learning/
+
+# SQLite databases & local runtime artifacts
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+data/*.db
+
+# Python caches and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Testing & Linting caches
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+logs/
+
+# IDE and Editor configurations
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Legacy/Obsolete directories
+OALab/
+OALAB/
 node_modules/
+scratch/

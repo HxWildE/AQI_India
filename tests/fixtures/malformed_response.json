@@ -1,0 +1,37 @@
+{
+  "InvalidMissingTime": {
+    "latitude": 28.6139,
+    "longitude": 77.2090,
+    "current": {
+      "pm10": 100.0,
+      "pm2_5": 50.0
+    }
+  },
+  "InvalidNegativePollutant": {
+    "latitude": 19.0760,
+    "longitude": 72.8777,
+    "current": {
+      "time": "2026-10-15T22:30",
+      "pm10": 50.0,
+      "pm2_5": -15.0
+    }
+  },
+  "InvalidOutOfRangePollutant": {
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "current": {
+      "time": "2026-10-15T22:30",
+      "pm10": 99999.0,
+      "pm2_5": 50.0
+    }
+  },
+  "InvalidMalformedTimestamp": {
+    "latitude": 22.5726,
+    "longitude": 88.3639,
+    "current": {
+      "time": "not-a-valid-timestamp",
+      "pm10": 45.0,
+      "pm2_5": 25.0
+    }
+  }
+}
