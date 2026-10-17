@@ -168,6 +168,14 @@ python -m aqi_pipeline.pipeline --mode live --show-recent
 python -m aqi_pipeline.pipeline --mode live --cities "New Delhi,Mumbai" --show-recent
 ```
 
+### 5. Run & Export Analytical Dataset to CSV
+Export cleaned observations directly to a CSV file for analysis in Jupyter, Excel, or Tableau:
+
+```bash
+python -m aqi_pipeline.pipeline --mode fixture --export-csv "exports/clean_aqi_dataset.csv" --show-recent
+```
+
+
 ---
 
 ## 7. Database Schema & Inspection
@@ -258,9 +266,10 @@ python -m pytest -v
 python -m pytest -v --run-live tests/test_live_smoke.py
 ```
 
-### Verified Test Suite Breakdown (27 Automated + 1 Live Smoke):
+### Verified Test Suite Breakdown (28 Automated + 1 Live Smoke):
 - `tests/test_analytics.py`:
   - `test_analytics_metrics_and_summary` (SQL window aggregations, PM2.5/PM10 ratio logic, data quality health audits)
+  - `test_zone_and_category_analytics_and_export` (Zonal regional metrics, AQI category breakdown, top polluted cities, and CSV dataset export)
 - `tests/test_anomaly.py`:
   - `test_anomaly_detection_with_outlier` (Scikit-learn Isolation Forest multi-pollutant outlier detection)
   - `test_domain_rule_pm_inversion_detected` (Atmospheric optical sensor PM2.5 > PM10 inversion rule check)
@@ -301,9 +310,12 @@ python -m pytest -v --run-live tests/test_live_smoke.py
 
 ```
 AQI_India/
+├── app.py                        # Streamlit web dashboard & anomaly visualizer
 ├── src/
 │   └── aqi_pipeline/
 │       ├── __init__.py           # Package initialization
+│       ├── analytics.py          # SQL analytics, zonal metrics, CSV export
+│       ├── anomaly.py            # Scikit-learn IsolationForest & domain rules
 │       ├── config.py             # Config, city metadata, pollutant bounds
 │       ├── extract.py            # HTTP extraction, retries, backoff, fixtures
 │       ├── transform.py          # Validation, IST/UTC timestamps, quarantine
@@ -316,6 +328,8 @@ AQI_India/
 │   │   ├── live_sample_response.json    # Sanitized real API response
 │   │   └── malformed_response.json      # Defective records for quarantine testing
 │   ├── conftest.py               # Pytest fixtures and tmp_path setup
+│   ├── test_analytics.py         # SQL analytics & reporting unit tests
+│   ├── test_anomaly.py           # Isolation Forest outlier detection tests
 │   ├── test_extract.py           # Extraction & network mock unit tests
 │   ├── test_transform.py         # Transformation & validation unit tests
 │   ├── test_load.py              # SQLite & idempotency unit tests

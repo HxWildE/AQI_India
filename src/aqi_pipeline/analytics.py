@@ -10,6 +10,7 @@ Executes analytical queries on SQLite database to analyze:
 
 from __future__ import annotations
 import logging
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 import pandas as pd
 
@@ -115,3 +116,74 @@ class AQIAnalytics:
             "total_pipeline_runs": runs_count,
             "quarantine_reasons": [dict(r) for r in quar_reasons],
         }
+
+    def get_zone_summary_metrics(self) -> pd.DataFrame:
+        """
+        Aggregates air quality metrics by geographical zone (North, South, East, West).
+        """
+        sql = """
+        SELECT 
+            COALESCE(zone, 'Unspecified') as zone,
+            COUNT(DISTINCT city) as city_count,
+            COUNT(*) as total_observations,
+            ROUND(AVG(pm2_5), 1) as avg_pm2_5,
+            ROUND(MAX(pm2_5), 1) as max_pm2_5,
+            ROUND(AVG(pm10), 1) as avg_pm10,
+            ROUND(MAX(pm10), 1) as max_pm10,
+            ROUND(AVG(provider_aqi), 0) as avg_aqi,
+            ROUND(MAX(provider_aqi), 0) as max_aqi
+        FROM aqi_observations
+        GROUP BY zone
+        ORDER BY avg_aqi DESC;
+        """
+        with self.loader.get_connection() as conn:
+            return pd.read_sql_query(sql, conn)
+
+    def get_aqi_category_breakdown(self) -> pd.DataFrame:
+        """
+        Computes distribution of observations across standard AQI categories.
+        """
+        sql = """
+        SELECT 
+            aqi_category,
+            COUNT(*) as count,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM aqi_observations), 1) as percentage
+        FROM aqi_observations
+        GROUP BY aqi_category
+        ORDER BY count DESC;
+        """
+        with self.loader.get_connection() as conn:
+            return pd.read_sql_query(sql, conn)
+
+    def get_top_polluted_cities(self, limit: int = 5) -> pd.DataFrame:
+        """
+        Returns top most polluted cities ordered by average AQI.
+        """
+        sql = """
+        SELECT 
+            city,
+            state,
+            zone,
+            ROUND(AVG(provider_aqi), 0) as avg_aqi,
+            ROUND(AVG(pm2_5), 1) as avg_pm2_5,
+            ROUND(AVG(pm10), 1) as avg_pm10,
+            MAX(timestamp_local) as latest_timestamp
+        FROM aqi_observations
+        GROUP BY city, state, zone
+        ORDER BY avg_aqi DESC
+        LIMIT ?;
+        """
+        with self.loader.get_connection() as conn:
+            return pd.read_sql_query(sql, conn, params=(limit,))
+
+    def export_observations_to_csv(self, output_path: str | Path) -> Path:
+        """
+        Exports all clean analytical observations to a CSV file.
+        """
+        df = self.get_all_observations_df()
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(out, index=False)
+        self.logger.info(f"Exported {len(df)} observations to CSV at {out}")
+        return out
+

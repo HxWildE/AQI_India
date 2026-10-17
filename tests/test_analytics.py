@@ -40,3 +40,40 @@ def test_analytics_metrics_and_summary(test_config):
     report = analytics.get_data_quality_report()
     assert report["accepted_observations"] == 6
     assert report["clean_rate_percent"] == 100.0
+
+
+def test_zone_and_category_analytics_and_export(test_config, tmp_path):
+    """Verifies zone aggregation, category breakdown, top polluted cities, and CSV export."""
+    pipeline = AQIPipeline(test_config)
+    pipeline.run(mode="fixture")
+
+    analytics = AQIAnalytics(test_config)
+
+    # 1. Test Zone metrics
+    zone_df = analytics.get_zone_summary_metrics()
+    assert not zone_df.empty
+    assert "zone" in zone_df.columns
+    assert "avg_aqi" in zone_df.columns
+    assert "city_count" in zone_df.columns
+
+    # 2. Test AQI Category breakdown
+    cat_df = analytics.get_aqi_category_breakdown()
+    assert not cat_df.empty
+    assert "aqi_category" in cat_df.columns
+    assert "count" in cat_df.columns
+    assert "percentage" in cat_df.columns
+    assert round(cat_df["percentage"].sum()) in (99, 100, 101)
+
+    # 3. Test Top polluted cities
+    top_df = analytics.get_top_polluted_cities(limit=3)
+    assert len(top_df) <= 3
+    assert "avg_aqi" in top_df.columns
+
+    # 4. Test CSV Export
+    csv_dest = tmp_path / "exports" / "test_observations.csv"
+    res_path = analytics.export_observations_to_csv(csv_dest)
+    assert res_path.exists()
+    assert res_path.stat().st_size > 0
+    read_back = pd.read_csv(res_path)
+    assert len(read_back) == 6
+

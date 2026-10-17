@@ -237,6 +237,12 @@ def main() -> None:
         action="store_true",
         help="Print the most recent observations from SQLite after pipeline run.",
     )
+    parser.add_argument(
+        "--export-csv",
+        type=str,
+        default=None,
+        help="Optional destination path to export clean observations as CSV after run.",
+    )
 
     args = parser.parse_args()
 
@@ -258,6 +264,12 @@ def main() -> None:
         summary = pipeline.run(mode=args.mode, selected_cities=selected_cities)
         recent_rows = pipeline.loader.get_recent_observations(limit=10) if args.show_recent else []
         render_cli_summary(summary, recent_rows)
+
+        if args.export_csv:
+            from aqi_pipeline.analytics import AQIAnalytics
+            analytics = AQIAnalytics(config)
+            out_csv = analytics.export_observations_to_csv(args.export_csv)
+            print(f"\n[INFO] Clean analytical observations exported to CSV: {out_csv}")
     except Exception as exc:
         print(f"\n[FATAL] Pipeline execution failed: {exc}", file=sys.stderr)
         sys.exit(1)

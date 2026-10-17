@@ -70,6 +70,8 @@ def load_data():
     df = analytics.get_all_observations_df()
     quality = analytics.get_data_quality_report()
     summary = analytics.get_city_summary_metrics()
+    zone_summary = analytics.get_zone_summary_metrics()
+    category_summary = analytics.get_aqi_category_breakdown()
 
     if not df.empty:
         detector = AQIAnomalyDetector(contamination=0.15)
@@ -77,7 +79,7 @@ def load_data():
     else:
         df_scored = pd.DataFrame()
 
-    return df_scored, quality, summary
+    return df_scored, quality, summary, zone_summary, category_summary
 
 
 # --- SIDEBAR CONTROLS ---
@@ -107,7 +109,7 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("Filters")
 
 # Load data
-df_observations, quality_report, city_summary = load_data()
+df_observations, quality_report, city_summary, zone_summary, category_summary = load_data()
 
 available_cities = sorted(df_observations["city"].unique()) if not df_observations.empty else list(DEFAULT_INDIAN_CITIES.keys())
 selected_cities = st.sidebar.multiselect("Select Cities", options=available_cities, default=available_cities)
@@ -149,6 +151,22 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     st.subheader("Geographic & Real-Time Air Quality Distribution")
 
+    # Dynamic Health Advisory Banner based on selected cities peak AQI
+    if not filtered_df.empty and filtered_df["provider_aqi"].notna().any():
+        max_curr_aqi = int(filtered_df["provider_aqi"].max())
+        if max_curr_aqi <= 50:
+            st.success(f"🟢 **Air Quality Advisory: Good (Peak AQI: {max_curr_aqi})** — Air quality is satisfactory, poses little or no health risk.")
+        elif max_curr_aqi <= 100:
+            st.info(f"🟡 **Air Quality Advisory: Moderate (Peak AQI: {max_curr_aqi})** — Air quality is acceptable; unusually sensitive individuals should consider limiting prolonged outdoor exertion.")
+        elif max_curr_aqi <= 150:
+            st.warning(f"🟠 **Air Quality Advisory: Unhealthy for Sensitive Groups (Peak AQI: {max_curr_aqi})** — Sensitive groups (children, elderly, respiratory issues) may experience health effects.")
+        elif max_curr_aqi <= 200:
+            st.warning(f"🔴 **Air Quality Advisory: Unhealthy (Peak AQI: {max_curr_aqi})** — Everyone may begin to experience health effects; limit strenuous outdoor activities and wear N95 masks.")
+        elif max_curr_aqi <= 300:
+            st.error(f"🟣 **Air Quality Advisory: Very Unhealthy (Peak AQI: {max_curr_aqi})** — Health alert: The risk of adverse health effects is substantially increased for everyone.")
+        else:
+            st.error(f"🚨 **Air Quality Advisory: Hazardous (Peak AQI: {max_curr_aqi})** — Emergency conditions: Serious health effects for the entire population.")
+
     col_map, col_cards = st.columns([1.2, 1])
 
     with col_map:
@@ -188,6 +206,15 @@ with tab1:
         ).properties(height=320)
         st.altair_chart(chart, use_container_width=True)
 
+        # Direct CSV dataset download
+        csv_bytes = filtered_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📥 Download Filtered Observations Dataset (CSV)",
+            data=csv_bytes,
+            file_name="aqi_india_filtered_observations.csv",
+            mime="text/csv",
+        )
+
 
 # --- TAB 2: SQL TREND ANALYSIS ---
 with tab2:
@@ -219,9 +246,37 @@ with tab2:
             ).properties(height=300)
             st.altair_chart(ratio_chart, use_container_width=True)
 
+    st.markdown("---")
+    st.subheader("Regional Zonal Insights & Category Distribution")
+
+    c3, c4 = st.columns(2)
+
+    with c3:
+        st.write("##### Air Quality by Geographic Zone (SQL Group By)")
+        if not zone_summary.empty:
+            zone_chart = alt.Chart(zone_summary).mark_bar(cornerRadius=4).encode(
+                x=alt.X("avg_aqi:Q", title="Average AQI"),
+                y=alt.Y("zone:N", sort="-x", title="Geographic Zone"),
+                color=alt.Color("zone:N", legend=None),
+                tooltip=["zone", "city_count", "avg_aqi", "avg_pm2_5", "avg_pm10"],
+            ).properties(height=260)
+            st.altair_chart(zone_chart, use_container_width=True)
+
+    with c4:
+        st.write("##### Overall AQI Category Distribution")
+        if not category_summary.empty:
+            cat_chart = alt.Chart(category_summary).mark_bar(cornerRadius=4).encode(
+                x=alt.X("percentage:Q", title="Percentage of Observations (%)"),
+                y=alt.Y("aqi_category:N", sort="-x", title="AQI Category"),
+                color=alt.Color("aqi_category:N", legend=None),
+                tooltip=["aqi_category", "count", "percentage"],
+            ).properties(height=260)
+            st.altair_chart(cat_chart, use_container_width=True)
+
     st.markdown("""
     > **Data Engineering Takeaway**: PM2.5 particles are a physical subset of PM10. Atmospheric ratios typically range between 0.4 and 0.8. A ratio $> 1.0$ violates physics and flags optical sensor baseline drift.
     """)
+
 
 
 # --- TAB 3: SCIKIT-LEARN ANOMALY DETECTION ---
