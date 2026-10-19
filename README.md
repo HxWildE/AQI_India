@@ -1,6 +1,13 @@
-# AQI India: End-to-End ETL Data Pipeline
+# AQI India: End-to-End ETL Data Pipeline, Analytics & ML Dashboard
 
-A resilient, testable, and idempotent data engineering pipeline in Python that extracts real-time air quality observations across major Indian metropolitan cities, performs strict data validation, and loads structured observations into an analytical SQLite database.
+[![Python](https://img.shields.io/badge/Python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Database](https://img.shields.io/badge/Database-SQLite3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![Machine Learning](https://img.shields.io/badge/ML-Scikit--Learn%20IsolationForest-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![Dashboard](https://img.shields.io/badge/UI-Streamlit%20Interactive-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Tests](https://img.shields.io/badge/Tests-28%20Passed%20%7C%20Pytest-brightgreen?logo=pytest&logoColor=white)](https://pytest.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+A resilient, testable, and idempotent data engineering pipeline in Python that extracts real-time air quality observations across major Indian metropolitan cities, performs strict data validation and quarantine governance, persists structured records into an analytical SQLite database, runs SQL trend analytics, detects multi-pollutant sensor anomalies using Scikit-learn, and serves a full-stack Streamlit intelligence dashboard.
 
 ---
 
@@ -10,12 +17,12 @@ Air pollution is a critical public health and environmental challenge across urb
 
 This project implements an end-to-end data engineering, analytics, and machine learning system designed around core production principles:
 - **Resilient Ingestion**: Bounded exponential backoff retries, explicit timeouts, and HTTP 429 rate-limit awareness (`Retry-After`).
-- **Data Quality & Governance**: Strict boundary validation, timezone normalization (IST to UTC), quarantine routing for defective observations, and a zero-imputation policy for missing measurements.
+- **Data Quality & Governance**: Strict boundary validation, timezone normalization (IST to UTC), quarantine routing for defective observations, and a strict zero-imputation policy for missing measurements.
 - **Relational Idempotency**: Natural composite unique keys `(city, timestamp_utc)` and upsert semantics guarantee that re-running ingestion never duplicates database records.
-- **SQL Trend Analytics**: Automated SQL window functions tracking city pollutant trends, diurnal distributions, and PM2.5/PM10 physical mass ratios.
+- **SQL Trend Analytics**: Automated SQL window functions tracking city pollutant trends, diurnal distributions, regional zonal metrics (North, South, East, West), AQI category distributions, and PM2.5/PM10 physical mass ratios.
 - **ML Anomaly Detection**: Unsupervised `IsolationForest` model (Scikit-learn) isolating multivariate outliers, extreme spikes, and optical sensor baseline inversions.
-- **Interactive Streamlit Dashboard**: Full-stack dark-mode web dashboard (`app.py`) for live monitoring, interactive map filtering, and anomaly visualization.
-- **Test-Driven Architecture**: 27 automated unit and integration tests using offline mocks and sanitized fixtures, plus an optional bounded live smoke test.
+- **Interactive Streamlit Dashboard**: Full-stack dark-mode web dashboard (`app.py`) for live monitoring, interactive map filtering, dynamic health advisory banners, and one-click CSV dataset export.
+- **Test-Driven Architecture**: 28 automated unit and integration tests using offline mocks and sanitized fixtures, plus an optional bounded live smoke test.
 
 ---
 
@@ -25,37 +32,40 @@ This project implements an end-to-end data engineering, analytics, and machine l
 [ Open-Meteo Air Quality REST API ] ──(Live Mode)──┐
                                                    ├──> [ Stage 1: Extract ] ──> Raw Payloads + Metadata
 [ Offline JSON Fixtures (Zero Quota) ] ──(Fixture)─┘          │
-                                                              ▼
+                                                               ▼
                                                    [ Stage 2: Transform ]
-                                                              │
-                                            ┌─────────────────┴─────────────────┐
-                                            ▼                                   ▼
-                                     [ Valid Records ]                 [ Defective Records ]
-                                            │                                   │
-                                            ▼                                   ▼
-                                     [ Stage 3: Load ]                  [ Quarantine Table ]
-                                            │                            `aqi_quarantine`
-                                            ▼
-                             [ SQLite: `aqi_observations` ]
-                               UNIQUE(city, timestamp_utc)
+                                                               │
+                                             ┌─────────────────┴─────────────────┐
+                                             ▼                                   ▼
+                                      [ Valid Records ]                 [ Defective Records ]
+                                             │                                   │
+                                             ▼                                   ▼
+                                      [ Stage 3: Load ]                  [ Quarantine Table ]
+                                             │                            `aqi_quarantine`
+                                             ▼
+                              [ SQLite: `aqi_observations` ]
+                                UNIQUE(city, timestamp_utc)
                                        │            ▲
                                        ▼            │
                          [ SQL Analytics Module ]   [ Audit: `pipeline_runs` ]
+                          (analytics.py / CSV Export)
                                        │
                                        ▼
                        [ Scikit-Learn Anomaly Detection ]
+                                 (anomaly.py)
                                        │
                                        ▼
-                     [ Interactive Streamlit Dashboard (app.py) ]
+                     [ Interactive Streamlit Dashboard ]
+                                   (app.py)
 ```
 
-### Detailed Sequence:
+### Detailed Execution Sequence:
 1. **Extract (`extract.py`)**: Fetches air quality observations for New Delhi, Mumbai, Bengaluru, Kolkata, Chennai, Hyderabad, Ahmedabad, and Lucknow. Enforces request timeouts and exponential backoff on transient errors (5xx, timeouts) while immediately aborting on permanent client errors (4xx).
 2. **Transform (`transform.py`)**: Parses Indian Standard Time (IST, UTC+05:30) timestamps into ISO-8601 UTC strings. Applies physical boundary checks ($0 \le \text{PM2.5} \le 1000\,\mu\text{g/m}^3$). Segregates defective records into a quarantine list with exact rejection reasons. Preserves missing metrics as `NULL` (never replaces with `0.0`).
 3. **Load (`load.py`)**: Executes an idempotent upsert (`INSERT ... ON CONFLICT DO UPDATE`) into `aqi_observations` within an atomic transaction. Logs execution metrics and status into `pipeline_runs`.
-4. **Analyze (`analytics.py`)**: Executes SQL queries to compute multi-city rolling averages, PM2.5/PM10 mass ratios, and pipeline data quality health rates.
+4. **Analyze (`analytics.py`)**: Executes SQL queries to compute multi-city rolling averages, PM2.5/PM10 mass ratios, regional zone metrics, AQI category breakdowns, and export clean datasets to CSV.
 5. **Detect Anomalies (`anomaly.py`)**: Standardizes 6 atmospheric features and fits a Scikit-learn `IsolationForest` model to detect unusual multivariate pollution events and sensor glitches.
-6. **Visualize (`app.py`)**: Serves an interactive Streamlit dashboard displaying geographic city maps, trend charts, and flagged anomaly scatter plots.
+6. **Visualize (`app.py`)**: Serves an interactive Streamlit dashboard displaying geographic city maps, trend charts, flagged anomaly scatter plots, dynamic health advisory banners, and CSV downloads.
 
 ---
 
@@ -142,7 +152,7 @@ cp .env.example .env
 ```bash
 python -m streamlit run app.py
 ```
-Opens the interactive web dashboard displaying real-time city maps, SQL trend analytics, Scikit-learn anomaly scatter plots, and live pipeline triggers.
+Opens the interactive web dashboard displaying real-time city maps, SQL trend analytics, Scikit-learn anomaly scatter plots, health advisory alerts, and live pipeline triggers.
 
 ### 2. Run in Offline Fixture Mode (Zero Network / Zero Quota)
 Ingests pre-sanitized historical observations from `tests/fixtures/batch_cities_response.json`:
@@ -174,7 +184,6 @@ Export cleaned observations directly to a CSV file for analysis in Jupyter, Exce
 ```bash
 python -m aqi_pipeline.pipeline --mode fixture --export-csv "exports/clean_aqi_dataset.csv" --show-recent
 ```
-
 
 ---
 
@@ -212,6 +221,7 @@ CREATE TABLE IF NOT EXISTS aqi_observations (
 
 CREATE INDEX IF NOT EXISTS idx_aqi_city_timestamp ON aqi_observations (city, timestamp_utc);
 CREATE INDEX IF NOT EXISTS idx_aqi_category ON aqi_observations (aqi_category);
+CREATE INDEX IF NOT EXISTS idx_aqi_timestamp_utc ON aqi_observations (timestamp_utc);
 ```
 
 ### 2. `aqi_quarantine`
@@ -251,9 +261,48 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
 
 ---
 
-## 8. Testing Strategy & Verification
+## 8. SQL Trend Analytics Engine
 
-The test suite covers unit logic, network failure modes, boundary validation, database idempotency, and end-to-end integration:
+The [`src/aqi_pipeline/analytics.py`](file:///c:/Users/harsh/OneDrive/Documents/Desktop/MYwebDEvprojects/AQI_India_ETL_Pipeline/src/aqi_pipeline/analytics.py) module provides structured analytical methods executing optimized SQLite queries:
+
+1. **`get_city_summary_metrics()`**: Computes average and peak PM2.5, PM10, and AQI per city using `AVG()` and `MAX()` window aggregations.
+2. **`get_pm_ratio_analysis()`**: Analyzes the physical mass ratio of PM2.5 to PM10 (`pm2_5 / pm10`). In atmospheric physics, this ratio typically sits between 0.3 and 0.8. Ratios exceeding 1.0 violate physical laws and flag optical sensor drift.
+3. **`get_zone_summary_metrics()`**: Aggregates air quality across Indian geographic regions (`North`, `South`, `East`, `West`).
+4. **`get_aqi_category_breakdown()`**: Calculates frequency and percentage distribution of observations across standard US EPA air quality tiers.
+5. **`get_top_polluted_cities(limit=5)`**: Fast ranking of cities by average recorded AQI.
+6. **`get_data_quality_report()`**: Calculates overall Clean Data Rate percentage (`accepted / total * 100`) and summarizes rejection causes.
+7. **`export_observations_to_csv(output_path)`**: Exports the entire analytical dataset to CSV for external workflows.
+
+---
+
+## 9. Scikit-Learn Anomaly Detection Engine
+
+The [`src/aqi_pipeline/anomaly.py`](file:///c:/Users/harsh/OneDrive/Documents/Desktop/MYwebDEvprojects/AQI_India_ETL_Pipeline/src/aqi_pipeline/anomaly.py) module detects multivariate atmospheric outliers without requiring historical labeled training data:
+
+- **Algorithm**: `sklearn.ensemble.IsolationForest` (100 estimators, 15% contamination rate).
+- **Feature Space**: 6 simultaneous pollutant features: `pm2_5`, `pm10`, `carbon_monoxide`, `nitrogen_dioxide`, `sulphur_dioxide`, and `ozone`.
+- **Imputation & Scaling**: Missing pollutant values are imputed via column medians, followed by zero-mean unit-variance transformation using `StandardScaler`.
+- **Continuous Score**: Decision functions are normalized to a `[0, 1]` scale where `1.0` indicates an extreme outlier.
+- **Domain Rule Inversion**: Flags physically impossible sensor states ($PM_{2.5} > 1.05 \times PM_{10}$ when $PM_{2.5} > 20\,\mu\text{g/m}^3$) as optical sensor baseline inversions.
+
+---
+
+## 10. Interactive Streamlit Dashboard
+
+The full-stack web dashboard ([`app.py`](file:///c:/Users/harsh/OneDrive/Documents/Desktop/MYwebDEvprojects/AQI_India_ETL_Pipeline/app.py)) provides a modern, dark-mode monitoring interface:
+
+- **Top KPI Cards**: Clean Observations count, Clean Rate %, Peak Recorded AQI, and ML Outliers Detected.
+- **Dynamic Health Advisory Alert**: Color-coded advisory banners reflecting the highest active AQI among selected cities (Good, Moderate, Unhealthy for Sensitive Groups, Unhealthy, Very Unhealthy, Hazardous).
+- **Tab 1: City Observations & Map**: Geographic coordinates plotted on an interactive map, city summary metrics, temporal trend lines, and a direct CSV download button.
+- **Tab 2: SQL Trend Analysis**: City-by-city AQI comparisons, PM2.5/PM10 ratio scatter plots, zonal regional comparisons, and AQI category breakdowns.
+- **Tab 3: Scikit-Learn Anomaly Detection**: 2D scatter plots separating normal observations from ML outliers, with score and reasoning breakdowns.
+- **Tab 4: Data Quality & Quarantine**: Detailed rejection reason audit tables and real-time execution run telemetry.
+
+---
+
+## 11. Testing Strategy & Verification
+
+The test suite covers unit logic, network failure modes, boundary validation, database idempotency, SQL analytics, ML anomaly detection, and end-to-end integration:
 
 ```bash
 # Run all automated tests (offline, fast, mocked):
@@ -306,7 +355,7 @@ python -m pytest -v --run-live tests/test_live_smoke.py
 
 ---
 
-## 9. Repository Structure
+## 12. Repository Structure
 
 ```
 AQI_India/
@@ -322,6 +371,21 @@ AQI_India/
 │       ├── load.py               # SQLite storage, idempotency, audit logs
 │       ├── pipeline.py           # Orchestrator & Rich CLI interface
 │       └── logging_config.py     # Structured logging with run_id
+├── learning/                     # Master engineering & interview curriculum
+│   ├── 00_project_map.md         # Learning roadmap & index
+│   ├── 01_setup_and_first_run.md # Environment setup & execution guide
+│   ├── 02_api_and_http_fundamentals.md # REST, headers & HTTP codes
+│   ├── 03_etl_from_scratch.md    # ETL vs ELT architecture
+│   ├── 04_data_quality_and_validation.md # Quarantine & validation rules
+│   ├── 05_sqlite_and_idempotency.md # Relational modeling & upserts
+│   ├── 06_error_handling_and_retries.md # Exponential backoff & rate limits
+│   ├── 07_architecture_and_data_flow.md # Mermaid architecture diagrams
+│   ├── 08_codebase_walkthrough.md # Module-by-module guided tour
+│   ├── 09_testing_strategy.md    # Test pyramid & mocking patterns
+│   ├── 10_job_description_mapping.md # Resume bullets & competency proof
+│   ├── 11_interview_questions.md # Question bank, pitches & defenses
+│   ├── 12_two_layer_deep_dive.md # Hard technical probe scenarios
+│   └── 13_troubleshooting_and_limitations.md # Production trade-offs & roadmap
 ├── tests/
 │   ├── fixtures/
 │   │   ├── batch_cities_response.json   # Multi-city offline test fixture
@@ -344,15 +408,15 @@ AQI_India/
 
 ---
 
-## 10. Current Limitations & Production Roadmap
+## 13. Current Limitations & Production Roadmap
 
 - **Storage Engine**: SQLite provides an isolated, portable local database, but is bounded to a single concurrent writer. Migrating to PostgreSQL or Snowflake with connection pooling (`pgbouncer`) would support hundreds of concurrent writers.
 - **Extraction Concurrency**: Ingestion runs sequentially across cities (~4 seconds for 8 cities). An asynchronous worker pool (`asyncio` / `aiohttp`) would scale ingestion to 5,000+ monitoring stations.
 - **Calculated NAQI**: The pipeline currently stores the provider-calculated US AQI (`provider_aqi`). Calculating the official Indian Central Pollution Control Board (CPCB) National AQI requires 24-hour rolling average concentrations, which will be implemented via scheduled aggregation views.
-- **Orchestration**: The pipeline is triggered via a Python CLI. In production, this command would be scheduled on an hourly cron schedule via Apache Airflow or Dagster.
+- **Orchestration**: The pipeline is triggered via a Python CLI or Streamlit UI. In production, this command would be scheduled on an hourly cron schedule via Apache Airflow or Dagster.
 
 ---
 
-## 11. License
+## 14. License
 
 This project is licensed under the MIT License.

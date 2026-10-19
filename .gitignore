@@ -3,8 +3,8 @@
 .env.*
 !.env.example
 
-# Private Local Learning Curriculum (kept locally, excluded from public repo)
-learning/
+# Exclude HTML scratch files inside learning directory
+learning/*.html
 
 # SQLite databases & local runtime artifacts
 *.db
