@@ -277,6 +277,17 @@ with tab2:
     > **Data Engineering Takeaway**: PM2.5 particles are a physical subset of PM10. Atmospheric ratios typically range between 0.4 and 0.8. A ratio $> 1.0$ violates physics and flags optical sensor baseline drift.
     """)
 
+    diurnal_df = analytics.get_hourly_diurnal_trends()
+    if not diurnal_df.empty and len(diurnal_df) > 1:
+        st.markdown("---")
+        st.write("##### Diurnal Hourly Pollution Cycle (IST)")
+        diurnal_chart = alt.Chart(diurnal_df).mark_line(point=True).encode(
+            x=alt.X("hour_of_day:O", title="Hour of Day (00:00 - 23:00 IST)"),
+            y=alt.Y("avg_pm2_5:Q", title="Avg PM2.5 Concentration (µg/m³)"),
+            tooltip=["hour_of_day", "avg_pm2_5", "avg_pm10", "avg_aqi", "observation_count"],
+        ).properties(height=240)
+        st.altair_chart(diurnal_chart, use_container_width=True)
+
 
 
 # --- TAB 3: SCIKIT-LEARN ANOMALY DETECTION ---
@@ -307,11 +318,15 @@ with tab3:
             st.metric("Features Inspected", "6 Pollutants")
 
         st.write("##### Flagged Unusual Observations")
-        anomalies_only = filtered_df[filtered_df["is_anomaly"]][["city", "timestamp_local", "pm2_5", "pm10", "provider_aqi", "anomaly_score", "anomaly_reason"]]
+        cols_anom = ["city", "timestamp_local", "pm2_5", "pm10", "provider_aqi", "anomaly_score", "anomaly_reason"]
+        if "top_contributor" in filtered_df.columns:
+            cols_anom.append("top_contributor")
+        anomalies_only = filtered_df[filtered_df["is_anomaly"]][cols_anom]
         if not anomalies_only.empty:
             st.dataframe(anomalies_only, hide_index=True, use_container_width=True)
         else:
             st.success("No anomalies detected in selected cities. All readings align with expected multi-pollutant distributions.")
+
 
 
 # --- TAB 4: DATA QUALITY & QUARANTINE ---

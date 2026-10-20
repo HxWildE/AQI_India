@@ -187,3 +187,24 @@ class AQIAnalytics:
         self.logger.info(f"Exported {len(df)} observations to CSV at {out}")
         return out
 
+    def get_hourly_diurnal_trends(self) -> pd.DataFrame:
+        """
+        Aggregates pollutant averages by hour of day (0-23 in IST)
+        to identify diurnal cycles and peak pollution windows (e.g. morning rush hours, evening smog).
+        """
+        sql = """
+        SELECT 
+            CAST(SUBSTR(timestamp_local, 12, 2) AS INTEGER) as hour_of_day,
+            COUNT(*) as observation_count,
+            ROUND(AVG(pm2_5), 1) as avg_pm2_5,
+            ROUND(AVG(pm10), 1) as avg_pm10,
+            ROUND(AVG(provider_aqi), 0) as avg_aqi
+        FROM aqi_observations
+        WHERE timestamp_local IS NOT NULL AND LENGTH(timestamp_local) >= 13
+        GROUP BY hour_of_day
+        ORDER BY hour_of_day ASC;
+        """
+        with self.loader.get_connection() as conn:
+            return pd.read_sql_query(sql, conn)
+
+

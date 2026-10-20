@@ -77,3 +77,18 @@ def test_zone_and_category_analytics_and_export(test_config, tmp_path):
     read_back = pd.read_csv(res_path)
     assert len(read_back) == 6
 
+
+def test_diurnal_trends_analytics(test_config):
+    """Verifies diurnal hourly pattern calculation."""
+    pipeline = AQIPipeline(test_config)
+    pipeline.run(mode="fixture")
+
+    analytics = AQIAnalytics(test_config)
+    diurnal_df = analytics.get_hourly_diurnal_trends()
+    assert not diurnal_df.empty
+    assert "hour_of_day" in diurnal_df.columns
+    assert "avg_pm2_5" in diurnal_df.columns
+    assert "observation_count" in diurnal_df.columns
+    assert (diurnal_df["hour_of_day"] >= 0).all() and (diurnal_df["hour_of_day"] <= 23).all()
+
+

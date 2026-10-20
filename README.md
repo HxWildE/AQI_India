@@ -4,7 +4,7 @@
 [![Database](https://img.shields.io/badge/Database-SQLite3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Machine Learning](https://img.shields.io/badge/ML-Scikit--Learn%20IsolationForest-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
 [![Dashboard](https://img.shields.io/badge/UI-Streamlit%20Interactive-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![Tests](https://img.shields.io/badge/Tests-28%20Passed%20%7C%20Pytest-brightgreen?logo=pytest&logoColor=white)](https://pytest.org/)
+[![Tests](https://img.shields.io/badge/Tests-30%20Passed%20%7C%20Pytest-brightgreen?logo=pytest&logoColor=white)](https://pytest.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 A resilient, testable, and idempotent data engineering pipeline in Python that extracts real-time air quality observations across major Indian metropolitan cities, performs strict data validation and quarantine governance, persists structured records into an analytical SQLite database, runs SQL trend analytics, detects multi-pollutant sensor anomalies using Scikit-learn, and serves a full-stack Streamlit intelligence dashboard.
@@ -22,7 +22,7 @@ This project implements an end-to-end data engineering, analytics, and machine l
 - **SQL Trend Analytics**: Automated SQL window functions tracking city pollutant trends, diurnal distributions, regional zonal metrics (North, South, East, West), AQI category distributions, and PM2.5/PM10 physical mass ratios.
 - **ML Anomaly Detection**: Unsupervised `IsolationForest` model (Scikit-learn) isolating multivariate outliers, extreme spikes, and optical sensor baseline inversions.
 - **Interactive Streamlit Dashboard**: Full-stack dark-mode web dashboard (`app.py`) for live monitoring, interactive map filtering, dynamic health advisory banners, and one-click CSV dataset export.
-- **Test-Driven Architecture**: 28 automated unit and integration tests using offline mocks and sanitized fixtures, plus an optional bounded live smoke test.
+- **Test-Driven Architecture**: 30 automated unit and integration tests using offline mocks and sanitized fixtures, plus an optional bounded live smoke test.
 
 ---
 
@@ -269,9 +269,10 @@ The [`src/aqi_pipeline/analytics.py`](file:///c:/Users/harsh/OneDrive/Documents/
 2. **`get_pm_ratio_analysis()`**: Analyzes the physical mass ratio of PM2.5 to PM10 (`pm2_5 / pm10`). In atmospheric physics, this ratio typically sits between 0.3 and 0.8. Ratios exceeding 1.0 violate physical laws and flag optical sensor drift.
 3. **`get_zone_summary_metrics()`**: Aggregates air quality across Indian geographic regions (`North`, `South`, `East`, `West`).
 4. **`get_aqi_category_breakdown()`**: Calculates frequency and percentage distribution of observations across standard US EPA air quality tiers.
-5. **`get_top_polluted_cities(limit=5)`**: Fast ranking of cities by average recorded AQI.
-6. **`get_data_quality_report()`**: Calculates overall Clean Data Rate percentage (`accepted / total * 100`) and summarizes rejection causes.
-7. **`export_observations_to_csv(output_path)`**: Exports the entire analytical dataset to CSV for external workflows.
+5. **`get_hourly_diurnal_trends()`**: Analyzes average pollution patterns by hour of day (00:00–23:00 IST) to pinpoint rush-hour cycles and smog accumulations.
+6. **`get_top_polluted_cities(limit=5)`**: Fast ranking of cities by average recorded AQI.
+7. **`get_data_quality_report()`**: Calculates overall Clean Data Rate percentage (`accepted / total * 100`) and summarizes rejection causes.
+8. **`export_observations_to_csv(output_path)`**: Exports the entire analytical dataset to CSV for external workflows.
 
 ---
 
@@ -281,6 +282,7 @@ The [`src/aqi_pipeline/anomaly.py`](file:///c:/Users/harsh/OneDrive/Documents/De
 
 - **Algorithm**: `sklearn.ensemble.IsolationForest` (100 estimators, 15% contamination rate).
 - **Feature Space**: 6 simultaneous pollutant features: `pm2_5`, `pm10`, `carbon_monoxide`, `nitrogen_dioxide`, `sulphur_dioxide`, and `ozone`.
+- **Explainable Feature Attribution**: Identifies `top_contributor` pollutant displaying the maximum standardized deviation (`argmax(|scaled_X|)`) for each anomaly.
 - **Imputation & Scaling**: Missing pollutant values are imputed via column medians, followed by zero-mean unit-variance transformation using `StandardScaler`.
 - **Continuous Score**: Decision functions are normalized to a `[0, 1]` scale where `1.0` indicates an extreme outlier.
 - **Domain Rule Inversion**: Flags physically impossible sensor states ($PM_{2.5} > 1.05 \times PM_{10}$ when $PM_{2.5} > 20\,\mu\text{g/m}^3$) as optical sensor baseline inversions.
@@ -294,8 +296,8 @@ The full-stack web dashboard ([`app.py`](file:///c:/Users/harsh/OneDrive/Documen
 - **Top KPI Cards**: Clean Observations count, Clean Rate %, Peak Recorded AQI, and ML Outliers Detected.
 - **Dynamic Health Advisory Alert**: Color-coded advisory banners reflecting the highest active AQI among selected cities (Good, Moderate, Unhealthy for Sensitive Groups, Unhealthy, Very Unhealthy, Hazardous).
 - **Tab 1: City Observations & Map**: Geographic coordinates plotted on an interactive map, city summary metrics, temporal trend lines, and a direct CSV download button.
-- **Tab 2: SQL Trend Analysis**: City-by-city AQI comparisons, PM2.5/PM10 ratio scatter plots, zonal regional comparisons, and AQI category breakdowns.
-- **Tab 3: Scikit-Learn Anomaly Detection**: 2D scatter plots separating normal observations from ML outliers, with score and reasoning breakdowns.
+- **Tab 2: SQL Trend Analysis**: City-by-city AQI comparisons, PM2.5/PM10 ratio scatter plots, diurnal hourly pollution cycle line charts, zonal regional comparisons, and AQI category breakdowns.
+- **Tab 3: Scikit-Learn Anomaly Detection**: 2D scatter plots separating normal observations from ML outliers, with score, reasoning, and top contributor breakdowns.
 - **Tab 4: Data Quality & Quarantine**: Detailed rejection reason audit tables and real-time execution run telemetry.
 
 ---
@@ -315,13 +317,15 @@ python -m pytest -v
 python -m pytest -v --run-live tests/test_live_smoke.py
 ```
 
-### Verified Test Suite Breakdown (28 Automated + 1 Live Smoke):
+### Verified Test Suite Breakdown (30 Automated + 1 Live Smoke):
 - `tests/test_analytics.py`:
   - `test_analytics_metrics_and_summary` (SQL window aggregations, PM2.5/PM10 ratio logic, data quality health audits)
   - `test_zone_and_category_analytics_and_export` (Zonal regional metrics, AQI category breakdown, top polluted cities, and CSV dataset export)
+  - `test_diurnal_trends_analytics` (Diurnal hourly pollution pattern aggregation across 24-hour cycles)
 - `tests/test_anomaly.py`:
-  - `test_anomaly_detection_with_outlier` (Scikit-learn Isolation Forest multi-pollutant outlier detection)
+  - `test_anomaly_detection_with_outlier` (Scikit-learn Isolation Forest multi-pollutant outlier detection and top contributor attribution)
   - `test_domain_rule_pm_inversion_detected` (Atmospheric optical sensor PM2.5 > PM10 inversion rule check)
+  - `test_insufficient_data_anomaly_handling` (Safe handling of empty and single-row data frames without model collapse)
 - `tests/test_extract.py`:
   - `test_fetch_city_success_mocked` (HTTP 200 payload ingestion & metadata tagging)
   - `test_fetch_city_rate_limit_with_retry_after` (HTTP 429 backoff & header parsing)

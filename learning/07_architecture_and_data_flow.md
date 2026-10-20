@@ -179,15 +179,15 @@ graph TD
         TestTrans["test_transform.py (8 Tests)<br/>Validates boundary rules, quarantine, no-zero-imputation"]
         TestLoad["test_load.py (5 Tests)<br/>Tests temporary SQLite, idempotency, transaction rollback"]
         TestPipe["test_pipeline.py (4 Tests)<br/>End-to-end fixture runs, idempotency, audit trail"]
-        TestAnalytics["test_analytics.py (2 Tests)<br/>Zonal metrics, AQI category breakdown, CSV export"]
-        TestAnomaly["test_anomaly.py (2 Tests)<br/>Isolation Forest outliers & sensor inversion rules"]
+        TestAnalytics["test_analytics.py (3 Tests)<br/>Zonal metrics, diurnal trends, CSV export"]
+        TestAnomaly["test_anomaly.py (3 Tests)<br/>Isolation Forest outliers, inversion rules, safe fallback"]
     end
 
     subgraph LiveSmoke["Optional Live Smoke Test"]
         LiveTest["test_live_smoke.py (1 Test)<br/>Single bounded real request to Open-Meteo<br/>(Runs only with pytest --run-live)"]
     end
 
-    Unit -->|100% Offline / Fast / Zero Quota| Passes([28 Passing Automated Tests])
+    Unit -->|100% Offline / Fast / Zero Quota| Passes([30 Passing Automated Tests])
     LiveSmoke -->|Verifies Real Upstream API Contract| LivePass([1 Verified Smoke Test])
 ```
 

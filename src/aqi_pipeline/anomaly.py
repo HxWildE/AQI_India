@@ -61,6 +61,7 @@ class AQIAnomalyDetector:
             out["is_anomaly"] = False
             out["anomaly_score"] = 0.0
             out["anomaly_reason"] = "Insufficient data"
+            out["top_contributor"] = None
             return out
 
         result_df = df.copy()
@@ -104,17 +105,27 @@ class AQIAnomalyDetector:
         final_is_anomaly = is_ml_outlier | has_pm_inversion
 
         reasons: List[str] = []
+        top_contributors: List[Optional[str]] = []
         for idx in range(len(result_df)):
             if has_pm_inversion is not False and has_pm_inversion.iloc[idx]:
                 reasons.append("Sensor Inversion: PM2.5 > PM10 reading")
+                top_contributors.append("pm2_5_vs_pm10")
             elif is_ml_outlier[idx]:
-                reasons.append("Multivariate IsolationForest Outlier")
+                if len(available_features) > 0:
+                    max_feat_idx = int(np.argmax(np.abs(scaled_X[idx])))
+                    contrib = available_features[max_feat_idx]
+                else:
+                    contrib = "unknown"
+                top_contributors.append(contrib)
+                reasons.append(f"Multivariate IsolationForest Outlier ({contrib})")
             else:
                 reasons.append("Normal Observation")
+                top_contributors.append(None)
 
         result_df["is_anomaly"] = final_is_anomaly
         result_df["anomaly_score"] = np.round(norm_scores, 3)
         result_df["anomaly_reason"] = reasons
+        result_df["top_contributor"] = top_contributors
 
         anomaly_count = int(final_is_anomaly.sum())
         self.logger.info(

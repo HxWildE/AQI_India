@@ -29,11 +29,13 @@ def test_anomaly_detection_with_outlier():
     assert "is_anomaly" in scored_df.columns
     assert "anomaly_score" in scored_df.columns
     assert "anomaly_reason" in scored_df.columns
+    assert "top_contributor" in scored_df.columns
 
     # The extreme outlier should be flagged as an anomaly
     outlier_row = scored_df[scored_df["city"] == "OutlierCity"].iloc[0]
     assert outlier_row["is_anomaly"] == True
     assert outlier_row["anomaly_score"] > 0.5
+    assert outlier_row["top_contributor"] is not None
 
 
 def test_domain_rule_pm_inversion_detected():
@@ -51,3 +53,20 @@ def test_domain_rule_pm_inversion_detected():
     inv_row = scored_df[scored_df["city"] == "InvertedCity"].iloc[0]
     assert inv_row["is_anomaly"] == True
     assert "PM2.5 > PM10" in inv_row["anomaly_reason"]
+    assert inv_row["top_contributor"] == "pm2_5_vs_pm10"
+
+
+def test_insufficient_data_anomaly_handling():
+    """Verifies that an empty or single-row dataset is handled cleanly without crashing."""
+    detector = AQIAnomalyDetector()
+    empty_df = pd.DataFrame()
+    res_empty = detector.detect_anomalies(empty_df)
+    assert res_empty.empty
+    assert "is_anomaly" in res_empty.columns
+
+    single_row_df = pd.DataFrame([{"city": "A", "pm2_5": 25.0, "pm10": 50.0}])
+    res_single = detector.detect_anomalies(single_row_df)
+    assert len(res_single) == 1
+    assert res_single["is_anomaly"].iloc[0] == False
+    assert res_single["top_contributor"].iloc[0] is None
+

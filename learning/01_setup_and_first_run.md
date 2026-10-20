@@ -161,7 +161,7 @@ for row in cursor.fetchall():
 ## 9. Running the Automated Test Suite
 
 ```powershell
-# Run all unit and integration tests (28 automated tests, offline, fast, mocked):
+# Run all unit and integration tests (30 automated tests, offline, fast, mocked):
 python -m pytest
 
 # Run the test suite with coverage/verbosity:

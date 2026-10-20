@@ -14,7 +14,7 @@ In data engineering, automated testing is essential to prevent silent data corru
             /         \   End-to-End Integration Tests (4 Tests)
            /           \  - Uses offline fixtures, temporary SQLite DBs, idempotency verification
           /─────────────\
-         /               \ Unit & Component Tests (24 Tests)
+         /               \ Unit & Component Tests (26 Tests)
         /                 \ - Isolated, mocked network calls, SQL analytics, ML anomaly detection
        /───────────────────\
 ```
