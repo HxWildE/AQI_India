@@ -1,5 +1,6 @@
 # AQI India: End-to-End ETL Data Pipeline, Analytics & ML Dashboard
 
+[![CI](https://github.com/HxWildE/AQI_India/actions/workflows/ci.yml/badge.svg)](https://github.com/HxWildE/AQI_India/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Database](https://img.shields.io/badge/Database-SQLite3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Machine Learning](https://img.shields.io/badge/ML-Scikit--Learn%20IsolationForest-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
