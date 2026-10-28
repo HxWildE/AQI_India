@@ -5,7 +5,7 @@
 [![Database](https://img.shields.io/badge/Database-SQLite3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Machine Learning](https://img.shields.io/badge/ML-Scikit--Learn%20IsolationForest-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
 [![Dashboard](https://img.shields.io/badge/UI-Streamlit%20Interactive-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![Tests](https://img.shields.io/badge/Tests-30%20Passed%20%7C%20Pytest-brightgreen?logo=pytest&logoColor=white)](https://pytest.org/)
+[![Tests](https://img.shields.io/badge/Tests-31%20Passed%20%7C%20Pytest-brightgreen?logo=pytest&logoColor=white)](https://pytest.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 A resilient, testable, and idempotent data engineering pipeline in Python that extracts real-time air quality observations across major Indian metropolitan cities, performs strict data validation and quarantine governance, persists structured records into an analytical SQLite database, runs SQL trend analytics, detects multi-pollutant sensor anomalies using Scikit-learn, and serves a full-stack Streamlit intelligence dashboard.
@@ -23,7 +23,7 @@ This project implements an end-to-end data engineering, analytics, and machine l
 - **SQL Trend Analytics**: Automated SQL window functions tracking city pollutant trends, diurnal distributions, regional zonal metrics (North, South, East, West), AQI category distributions, and PM2.5/PM10 physical mass ratios.
 - **ML Anomaly Detection**: Unsupervised `IsolationForest` model (Scikit-learn) isolating multivariate outliers, extreme spikes, and optical sensor baseline inversions.
 - **Interactive Streamlit Dashboard**: Full-stack dark-mode web dashboard (`app.py`) for live monitoring, interactive map filtering, dynamic health advisory banners, and one-click CSV dataset export.
-- **Test-Driven Architecture**: 30 automated unit and integration tests using offline mocks and sanitized fixtures, plus an optional bounded live smoke test.
+- **Test-Driven Architecture**: 31 automated unit and integration tests using offline mocks and sanitized fixtures, plus an optional bounded live smoke test.
 
 ---
 
@@ -318,7 +318,7 @@ python -m pytest -v
 python -m pytest -v --run-live tests/test_live_smoke.py
 ```
 
-### Verified Test Suite Breakdown (30 Automated + 1 Live Smoke):
+### Verified Test Suite Breakdown (31 Automated + 1 Live Smoke):
 - `tests/test_analytics.py`:
   - `test_analytics_metrics_and_summary` (SQL window aggregations, PM2.5/PM10 ratio logic, data quality health audits)
   - `test_zone_and_category_analytics_and_export` (Zonal regional metrics, AQI category breakdown, top polluted cities, and CSV dataset export)
@@ -355,6 +355,7 @@ python -m pytest -v --run-live tests/test_live_smoke.py
   - `test_e2e_idempotency_on_rerun` (End-to-end idempotency audit)
   - `test_pipeline_with_malformed_fixture_routes_to_quarantine` (Quarantine handling)
   - `test_pipeline_failure_audit_logging` (Failure state audit in `pipeline_runs`)
+  - `test_pipeline_run_with_selected_cities_filter` (Target city subset extraction and isolation)
 - `tests/test_live_smoke.py`:
   - `test_live_api_smoke_bounded` (Optional live smoke test against live Open-Meteo API)
 

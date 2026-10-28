@@ -103,3 +103,20 @@ def test_pipeline_failure_audit_logging(test_config):
         ).fetchone()
         assert row["status"] == "FAILED"
         assert "Simulated pipeline crash" in row["error_message"]
+
+
+def test_pipeline_run_with_selected_cities_filter(test_config):
+    """Verifies that filtering by selected cities in fixture mode isolates target cities."""
+    pipeline = AQIPipeline(test_config)
+    summary = pipeline.run(mode="fixture", selected_cities=["New Delhi", "Mumbai"])
+
+    assert summary["status"] == "SUCCESS"
+    assert summary["records_extracted"] == 2
+    assert summary["records_accepted"] == 2
+    assert summary["records_inserted"] == 2
+    assert pipeline.loader.get_total_observations_count() == 2
+
+    recent = pipeline.loader.get_recent_observations(10)
+    cities_in_db = {r["city"] for r in recent}
+    assert cities_in_db == {"New Delhi", "Mumbai"}
+

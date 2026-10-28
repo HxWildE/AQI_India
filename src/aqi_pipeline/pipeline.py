@@ -71,6 +71,11 @@ class AQIPipeline:
 
             if exec_mode == "fixture":
                 raw_payloads = self.extractor.extract_from_fixtures(self.config.fixture_path)
+                if selected_cities:
+                    raw_payloads = [
+                        p for p in raw_payloads
+                        if p.get("_metadata", {}).get("city") in selected_cities
+                    ]
             else:
                 raw_payloads = self.extractor.extract_all(cities_to_fetch)
 

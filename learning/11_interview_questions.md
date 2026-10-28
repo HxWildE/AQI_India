@@ -10,7 +10,7 @@ This document is your master interview preparation guide. It contains your 60-se
 > 
 > Rather than just making an API call, I engineered production data pipeline patterns: bounded exponential backoff retries with HTTP 429 rate-limit handling, strict schema validation and quarantine routing for corrupted sensor data without silent zero-imputation, and guaranteed database idempotency using composite natural keys on city and UTC timestamp. 
 > 
-> Downstream, I built a SQL analytics engine tracking zonal trends and PM mass ratios, a Scikit-learn Isolation Forest model detecting multivariate sensor anomalies, and an interactive Streamlit dashboard with dynamic public health advisories and CSV export. The codebase is tested with a 30-test pytest suite using offline mocks, and includes a zero-dependency fixture mode so anyone can verify it end-to-end without an API key."
+> Downstream, I built a SQL analytics engine tracking zonal trends and PM mass ratios, a Scikit-learn Isolation Forest model detecting multivariate sensor anomalies, and an interactive Streamlit dashboard with dynamic public health advisories and CSV export. The codebase is tested with a 31-test pytest suite using offline mocks, and includes a zero-dependency fixture mode so anyone can verify it end-to-end without an API key."
 
 ---
 
@@ -99,7 +99,7 @@ Let's trace **New Delhi** through the pipeline:
 ---
 
 ### Q5: How do you test this pipeline without consuming live API quotas or risking flaky CI runs?
-- **Concise Answer**: I separated the test suite into 30 deterministic automated tests using mocked HTTP responses and local fixtures, and 1 separate bounded live smoke test that only runs when explicitly requested.
+- **Concise Answer**: I separated the test suite into 31 deterministic automated tests using mocked HTTP responses and local fixtures, and 1 separate bounded live smoke test that only runs when explicitly requested.
 - **Detailed Explanation**: In `test_extract.py`, we use `unittest.mock.patch` on `requests.Session.get` to simulate 200 OK, 429 Rate Limits, 500 Server Errors, timeouts, and corrupted JSON. The entire suite runs in under 3 seconds offline. For end-to-end integration, we load pre-sanitized fixtures from `tests/fixtures/batch_cities_response.json` into an isolated temporary SQLite database created by pytest's `tmp_path`. We also test SQL aggregations, zonal metrics, CSV export, and Isolation Forest outliers.
 - **Source Code**: `tests/conftest.py`, `tests/test_extract.py`, `tests/test_pipeline.py`, `tests/test_analytics.py`, `tests/test_anomaly.py`
 - **Follow-Up 1**: *How do you prevent the live smoke test from executing during standard CI runs?*

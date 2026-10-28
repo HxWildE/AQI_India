@@ -11,7 +11,7 @@ In data engineering, automated testing is essential to prevent silent data corru
                /   \      Live API Smoke Tests (1 Test)
               /     \     - Bounded, optional, manually triggered
              /───────\
-            /         \   End-to-End Integration Tests (4 Tests)
+            /         \   End-to-End Integration Tests (5 Tests)
            /           \  - Uses offline fixtures, temporary SQLite DBs, idempotency verification
           /─────────────\
          /               \ Unit & Component Tests (26 Tests)
