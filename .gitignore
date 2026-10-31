@@ -3,8 +3,9 @@
 .env.*
 !.env.example
 
-# Exclude learning curriculum directory
-learning/
+# Exclude HTML scratch files inside learning directory
+learning/*.html
+learning/archive/
 
 # SQLite databases & local runtime artifacts
 *.db

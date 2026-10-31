@@ -25,6 +25,16 @@ This project implements an end-to-end data engineering, analytics, and machine l
 - **Interactive Streamlit Dashboard**: Full-stack dark-mode web dashboard (`app.py`) for live monitoring, interactive map filtering, dynamic health advisory banners, and one-click CSV dataset export.
 - **Test-Driven Architecture**: 31 automated unit and integration tests using offline mocks and sanitized fixtures, plus an optional bounded live smoke test.
 
+### Resume Bullet Points & Interview Defense
+
+If presenting this project on your resume, use these tested, minimal, high-signal bullet points:
+
+* Built an **ETL pipeline** to ingest multi-city air quality data, implementing **data quarantine** and **idempotent upserts** in SQLite.
+* Authored **SQL analytics** to track regional pollution patterns, atmospheric **ratio checks**, and **data-quality audits**.
+* Detected sensor anomalies using an **Isolation Forest**, surfaced on a **Streamlit dashboard** with dynamic **health advisories**.
+
+> Complete verbal interview scripts and defense breakdowns are detailed in [**`learning/06_interview_defense_and_50_qna_bank.md`**](file:///c:/Users/harsh/OneDrive/Documents/Desktop/MYwebDEvprojects/AQI_India_ETL_Pipeline/learning/06_interview_defense_and_50_qna_bank.md).
+
 ---
 
 ## 2. High-Level Architecture & Workflow
@@ -361,7 +371,7 @@ python -m pytest -v --run-live tests/test_live_smoke.py
 
 ---
 
-## 12. Repository Structure
+## 12. Repository Structure & Master Learning Curriculum
 
 ```
 AQI_India/
@@ -378,20 +388,14 @@ AQI_India/
 │       ├── pipeline.py           # Orchestrator & Rich CLI interface
 │       └── logging_config.py     # Structured logging with run_id
 ├── learning/                     # Master engineering & interview curriculum
-│   ├── 00_project_map.md         # Learning roadmap & index
-│   ├── 01_setup_and_first_run.md # Environment setup & execution guide
-│   ├── 02_api_and_http_fundamentals.md # REST, headers & HTTP codes
-│   ├── 03_etl_from_scratch.md    # ETL vs ELT architecture
-│   ├── 04_data_quality_and_validation.md # Quarantine & validation rules
-│   ├── 05_sqlite_and_idempotency.md # Relational modeling & upserts
-│   ├── 06_error_handling_and_retries.md # Exponential backoff & rate limits
-│   ├── 07_architecture_and_data_flow.md # Mermaid architecture diagrams
-│   ├── 08_codebase_walkthrough.md # Module-by-module guided tour
-│   ├── 09_testing_strategy.md    # Test pyramid & mocking patterns
-│   ├── 10_job_description_mapping.md # Resume bullets & competency proof
-│   ├── 11_interview_questions.md # Question bank, pitches & defenses
-│   ├── 12_two_layer_deep_dive.md # Hard technical probe scenarios
-│   └── 13_troubleshooting_and_limitations.md # Production trade-offs & roadmap
+│   ├── 00_master_curriculum_index.md # Master syllabus & architecture roadmap
+│   ├── 01_project_origin_story_and_foundations.md # Origins, smog crisis & lifecycle
+│   ├── 01_setup_and_first_run.md # Environment setup & execution quickstart
+│   ├── 02_tech_stack_deep_dive_and_defense.md # Stack tradeoffs & counter-factual defense
+│   ├── 03_mit_professor_data_engineering_masterclass.md # Ingestion, quarantine & idempotency
+│   ├── 04_database_deep_dive_sqlite_vs_postgres.md # SQLite internals vs Postgres MVCC
+│   ├── 05_mit_professor_ml_masterclass_isolation_forest.md # Math derivations & optical rules
+│   └── 06_interview_defense_and_50_qna_bank.md # Resume scripts & 50 direct Q&A bank
 ├── tests/
 │   ├── fixtures/
 │   │   ├── batch_cities_response.json   # Multi-city offline test fixture

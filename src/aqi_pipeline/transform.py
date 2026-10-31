@@ -153,6 +153,16 @@ class AQITransformer:
             return "Very Unhealthy"
         return "Hazardous"
 
+    def _quarantine(self, city: str, ts: Optional[str], reason: str, payload: Any) -> QuarantineRecord:
+        """Helper to construct standardized QuarantineRecord."""
+        return QuarantineRecord(
+            city=city,
+            timestamp_local=ts,
+            rejection_reason=reason,
+            raw_payload_snippet=json.dumps(payload)[:300],
+            quarantined_at_utc=datetime.now(timezone.utc).isoformat(),
+        )
+
     def transform_single(
         self, raw_payload: Dict[str, Any]
     ) -> Tuple[Optional[ObservationRecord], Optional[QuarantineRecord]]:
@@ -166,7 +176,6 @@ class AQITransformer:
 
         current = raw_payload.get("current")
         if not current or not isinstance(current, dict):
-            # Try top level if nested 'current' doesn't exist
             current = raw_payload
 
         # 1. Validate & Parse Timestamp
@@ -174,64 +183,34 @@ class AQITransformer:
         try:
             time_local, time_utc = self.parse_timestamp(raw_time)
         except ValueError as err:
-            return None, QuarantineRecord(
-                city=city,
-                timestamp_local=str(raw_time),
-                rejection_reason=f"Timestamp validation failed: {err}",
-                raw_payload_snippet=json.dumps(current)[:300],
-                quarantined_at_utc=datetime.now(timezone.utc).isoformat(),
-            )
+            return None, self._quarantine(city, str(raw_time), f"Timestamp validation failed: {err}", current)
 
         # 2. Extract Coordinates and Geographic Context
         city_meta = DEFAULT_INDIAN_CITIES.get(city, {})
         lat = float(raw_payload.get("latitude", city_meta.get("latitude", 0.0)))
         lon = float(raw_payload.get("longitude", city_meta.get("longitude", 0.0)))
-        state = city_meta.get("state")
-        zone = city_meta.get("zone")
 
         # 3. Validate Pollutant Values (Strict validation without zero-imputation)
-        pollutant_fields = [
-            "pm2_5",
-            "pm10",
-            "carbon_monoxide",
-            "nitrogen_dioxide",
-            "sulphur_dioxide",
-            "ozone",
-            "us_aqi",
-        ]
+        pollutant_fields = ["pm2_5", "pm10", "carbon_monoxide", "nitrogen_dioxide", "sulphur_dioxide", "ozone", "us_aqi"]
         cleaned_values: Dict[str, Optional[float]] = {}
 
         for field_name in pollutant_fields:
-            raw_val = current.get(field_name)
-            is_valid, val, err_reason = self.validate_pollutant(field_name, raw_val)
+            is_valid, val, err_reason = self.validate_pollutant(field_name, current.get(field_name))
             if not is_valid:
-                return None, QuarantineRecord(
-                    city=city,
-                    timestamp_local=time_local,
-                    rejection_reason=f"Data quality violation: {err_reason}",
-                    raw_payload_snippet=json.dumps(current)[:300],
-                    quarantined_at_utc=datetime.now(timezone.utc).isoformat(),
-                )
+                return None, self._quarantine(city, time_local, f"Data quality violation: {err_reason}", current)
             cleaned_values[field_name] = val
 
         # Check that at least one major pollutant is present
-        core_pollutants = [cleaned_values["pm2_5"], cleaned_values["pm10"], cleaned_values["us_aqi"]]
-        if all(v is None for v in core_pollutants):
-            return None, QuarantineRecord(
-                city=city,
-                timestamp_local=time_local,
-                rejection_reason="Empty observation: all core pollutants (PM2.5, PM10, AQI) are missing",
-                raw_payload_snippet=json.dumps(current)[:300],
-                quarantined_at_utc=datetime.now(timezone.utc).isoformat(),
-            )
+        if all(cleaned_values[k] is None for k in ("pm2_5", "pm10", "us_aqi")):
+            return None, self._quarantine(city, time_local, "Empty observation: all core pollutants (PM2.5, PM10, AQI) are missing", current)
 
         provider_aqi = cleaned_values["us_aqi"]
         category = self.get_us_aqi_category(provider_aqi)
 
         record = ObservationRecord(
             city=city,
-            state=state,
-            zone=zone,
+            state=city_meta.get("state"),
+            zone=city_meta.get("zone"),
             latitude=lat,
             longitude=lon,
             timestamp_local=time_local,

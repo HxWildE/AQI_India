@@ -36,6 +36,10 @@ class AQIExtractor:
         self.logger = logger or setup_logger("aqi_pipeline.extract")
         self.session = requests.Session()
 
+    def _calc_backoff(self, attempt: int) -> float:
+        """Calculates exponential backoff delay for a given attempt."""
+        return float(self.config.backoff_factor * (2 ** (attempt - 1)))
+
     def fetch_city_data(self, city_name: str, latitude: float, longitude: float) -> Dict[str, Any]:
         """
         Fetch real-time air quality metrics for a single Indian city with bounded retries.
@@ -49,8 +53,6 @@ class AQIExtractor:
             "current": "pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,us_aqi",
             "timezone": "Asia/Kolkata",
         }
-
-        # Open-Meteo allows optional API key parameter for commercial users
         if self.config.api_key:
             params["apikey"] = self.config.api_key
 
@@ -58,51 +60,34 @@ class AQIExtractor:
 
         for attempt in range(1, self.config.max_retries + 1):
             try:
-                self.logger.debug(
-                    f"Fetching AQI for {city_name} (attempt {attempt}/{self.config.max_retries})"
-                )
+                self.logger.debug(f"Fetching AQI for {city_name} (attempt {attempt}/{self.config.max_retries})")
                 response = self.session.get(
                     self.config.api_base_url,
                     params=params,
                     timeout=self.config.timeout_seconds,
                 )
 
-                # HTTP 429: Rate Limit
                 if response.status_code == 429:
-                    retry_after = response.headers.get("Retry-After")
-                    sleep_time = (
-                        float(retry_after)
-                        if retry_after and retry_after.isdigit()
-                        else self.config.backoff_factor * (2 ** (attempt - 1))
-                    )
-                    self.logger.warning(
-                        f"Rate limited (429) for {city_name}. Backing off for {sleep_time:.2f}s..."
-                    )
+                    hdr = response.headers.get("Retry-After")
+                    sleep_time = float(hdr) if hdr and hdr.isdigit() else self._calc_backoff(attempt)
+                    self.logger.warning(f"Rate limited (429) for {city_name}. Backing off {sleep_time:.2f}s...")
                     time.sleep(sleep_time)
                     continue
 
-                # Permanent Client Errors: Do NOT retry
                 if 400 <= response.status_code < 500:
-                    error_msg = f"Permanent client error HTTP {response.status_code} for {city_name}: {response.text[:200]}"
-                    self.logger.error(error_msg)
-                    raise ExtractionError(error_msg)
+                    err_msg = f"Permanent client error HTTP {response.status_code} for {city_name}: {response.text[:200]}"
+                    self.logger.error(err_msg)
+                    raise ExtractionError(err_msg)
 
-                # Server Errors (5xx): Retry with backoff
                 if 500 <= response.status_code < 600:
-                    self.logger.warning(
-                        f"Server error HTTP {response.status_code} for {city_name} on attempt {attempt}"
-                    )
+                    self.logger.warning(f"Server error HTTP {response.status_code} for {city_name} on attempt {attempt}")
                     if attempt < self.config.max_retries:
-                        sleep_time = self.config.backoff_factor * (2 ** (attempt - 1))
-                        time.sleep(sleep_time)
+                        time.sleep(self._calc_backoff(attempt))
                         continue
                     response.raise_for_status()
 
-                # Success (200 OK)
                 response.raise_for_status()
                 payload = response.json()
-
-                # Tag payload with extraction provenance
                 payload["_metadata"] = {
                     "city": city_name,
                     "extracted_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -114,12 +99,9 @@ class AQIExtractor:
 
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
                 last_exception = exc
-                self.logger.warning(
-                    f"Network error ({type(exc).__name__}) fetching {city_name} (attempt {attempt}/{self.config.max_retries})"
-                )
+                self.logger.warning(f"Network error ({type(exc).__name__}) for {city_name} (attempt {attempt}/{self.config.max_retries})")
                 if attempt < self.config.max_retries:
-                    sleep_time = self.config.backoff_factor * (2 ** (attempt - 1))
-                    time.sleep(sleep_time)
+                    time.sleep(self._calc_backoff(attempt))
                 else:
                     break
             except requests.exceptions.JSONDecodeError as exc:
