@@ -4,8 +4,9 @@
 [![Python](https://img.shields.io/badge/Python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Database](https://img.shields.io/badge/Database-SQLite3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Machine Learning](https://img.shields.io/badge/ML-Scikit--Learn%20IsolationForest-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![API Gateway](https://img.shields.io/badge/API-FastAPI%20%7C%20Uvicorn-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Dashboard](https://img.shields.io/badge/UI-Streamlit%20Interactive-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![Tests](https://img.shields.io/badge/Tests-31%20Passed%20%7C%20Pytest-brightgreen?logo=pytest&logoColor=white)](https://pytest.org/)
+[![Tests](https://img.shields.io/badge/Tests-40%20Passed%20%7C%20Pytest-brightgreen?logo=pytest&logoColor=white)](https://pytest.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 A resilient, testable, and idempotent data engineering pipeline in Python that extracts real-time air quality observations across major Indian metropolitan cities, performs strict data validation and quarantine governance, persists structured records into an analytical SQLite database, runs SQL trend analytics, detects multi-pollutant sensor anomalies using Scikit-learn, and serves a full-stack Streamlit intelligence dashboard.
@@ -90,6 +91,7 @@ If presenting this project on your resume, use these tested, minimal, high-signa
 | **Data Processing** | `pandas` | High-performance tabular data structures and window aggregation. |
 | **Machine Learning**| `scikit-learn` | Unsupervised `IsolationForest` for multi-pollutant statistical anomaly detection. |
 | **Web Dashboard** | `streamlit` | Reactive data dashboard visualizing maps, trends, and outliers. |
+| **REST API Gateway** | `fastapi` + `uvicorn` | High-performance ASGI REST service with automatic OpenAPI Swagger docs and async BackgroundTasks. |
 | **Visualizations** | `altair` | Declarative statistical charting for multi-pollutant correlations. |
 | **Validation** | Python Dataclasses | Type-safe data containers with zero runtime framework overhead. |
 | **Configuration** | `python-dotenv` | Twelve-Factor App methodology; keeps credentials and knobs outside source code. |
@@ -165,7 +167,13 @@ python -m streamlit run app.py
 ```
 Opens the interactive web dashboard displaying real-time city maps, SQL trend analytics, Scikit-learn anomaly scatter plots, health advisory alerts, and live pipeline triggers.
 
-### 2. Run in Offline Fixture Mode (Zero Network / Zero Quota)
+### 2. Launch the FastAPI REST API Gateway
+```bash
+uvicorn api:app --reload --port 8000
+```
+Starts the high-performance ASGI REST server. Interactive Swagger UI is live at `http://localhost:8000/docs`, and ReDoc documentation at `http://localhost:8000/redoc`.
+
+### 3. Run in Offline Fixture Mode (Zero Network / Zero Quota)
 Ingests pre-sanitized historical observations from `tests/fixtures/batch_cities_response.json`:
 
 ```bash
@@ -375,10 +383,12 @@ python -m pytest -v --run-live tests/test_live_smoke.py
 
 ```
 AQI_India/
+├── api.py                        # Root Uvicorn entrypoint for FastAPI Gateway
 ├── app.py                        # Streamlit web dashboard & anomaly visualizer
 ├── src/
 │   └── aqi_pipeline/
 │       ├── __init__.py           # Package initialization
+│       ├── api.py                # FastAPI REST API endpoints, Pydantic schemas
 │       ├── analytics.py          # SQL analytics, zonal metrics, CSV export
 │       ├── anomaly.py            # Scikit-learn IsolationForest & domain rules
 │       ├── config.py             # Config, city metadata, pollutant bounds
@@ -387,7 +397,7 @@ AQI_India/
 │       ├── load.py               # SQLite storage, idempotency, audit logs
 │       ├── pipeline.py           # Orchestrator & Rich CLI interface
 │       └── logging_config.py     # Structured logging with run_id
-├── learning/                     # Master engineering & interview curriculum
+├── learning/                     # Master engineering & interview curriculum (local)
 │   ├── 00_master_curriculum_index.md # Master syllabus & architecture roadmap
 │   ├── 01_project_origin_story_and_foundations.md # Origins, smog crisis & lifecycle
 │   ├── 01_setup_and_first_run.md # Environment setup & execution quickstart
@@ -395,13 +405,15 @@ AQI_India/
 │   ├── 03_mit_professor_data_engineering_masterclass.md # Ingestion, quarantine & idempotency
 │   ├── 04_database_deep_dive_sqlite_vs_postgres.md # SQLite internals vs Postgres MVCC
 │   ├── 05_mit_professor_ml_masterclass_isolation_forest.md # Math derivations & optical rules
-│   └── 06_interview_defense_and_50_qna_bank.md # Resume scripts & 50 direct Q&A bank
+│   ├── 06_interview_defense_and_50_qna_bank.md # Resume scripts & 55 direct Q&A bank
+│   └── 07_python_core_and_interview_mastery.md # 50 core Python internals & defense points
 ├── tests/
 │   ├── fixtures/
 │   │   ├── batch_cities_response.json   # Multi-city offline test fixture
 │   │   ├── live_sample_response.json    # Sanitized real API response
 │   │   └── malformed_response.json      # Defective records for quarantine testing
 │   ├── conftest.py               # Pytest fixtures and tmp_path setup
+│   ├── test_api.py               # FastAPI endpoint & background task tests
 │   ├── test_analytics.py         # SQL analytics & reporting unit tests
 │   ├── test_anomaly.py           # Isolation Forest outlier detection tests
 │   ├── test_extract.py           # Extraction & network mock unit tests
