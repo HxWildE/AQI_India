@@ -34,31 +34,31 @@ To achieve enterprise reliability, the platform separates concerns into four dis
 ```mermaid
 flowchart TD
     subgraph T1["Tier 1: Extraction & Ingestion Engine (extract.py)"]
-        API["Open-Meteo REST API<br/>(/v1/air-quality)"] -->|HTTP GET with Session| EXT["AQIExtractor"]
+        API["Open-Meteo REST API<br/>Air Quality Endpoint"] -->|HTTP GET with Session| EXT["AQIExtractor"]
         EXT -->|Transient 5xx / 429| RETRY["Bounded Exponential Backoff<br/>+ Retry-After Inspection"]
         RETRY -.->|Retry| EXT
         EXT -->|Permanent 4xx / Corrupt JSON| FAIL["Fail-Fast Terminal ExtractionError"]
-        EXT -->|Offline Flag| FIX["Zero-Dependency Local Fixtures<br/>(batch_cities_response.json)"]
-        EXT -->|Enrich Payload| RAW["Raw Ingestion Payloads<br/>Tagged with _metadata (UTC, Source)"]
+        EXT -->|Offline Flag| FIX["Zero-Dependency Local Fixtures<br/>batch_cities_response.json"]
+        EXT -->|Enrich Payload| RAW["Raw Ingestion Payloads<br/>Tagged with metadata UTC, Source"]
     end
 
     subgraph T2["Tier 2: Transformation & Data Quality Gate (transform.py)"]
         RAW --> TF["AQITransformer"]
-        TF --> VAL_TS["Parse & Canonicalize Timestamps<br/>(IST UTC+05:30 -> ISO UTC)"]
-        TF --> VAL_BOUNDS["Physical Boundary Checks<br/>(0.0 <= PM2.5 <= 1000.0, etc.)"]
-        TF --> VAL_NULLS["Strict Null Preservation<br/>(No Silent Zero-Imputation)"]
+        TF --> VAL_TS["Parse & Canonicalize Timestamps<br/>IST UTC+05:30 to ISO UTC"]
+        TF --> VAL_BOUNDS["Physical Boundary Checks<br/>0.0 to 1000.0 ug/m3 range"]
+        TF --> VAL_NULLS["Strict Null Preservation<br/>No Silent Zero-Imputation"]
         TF -->|Pass Boundary| OBS["ObservationRecord Dataclasses"]
-        TF -->|Fail Boundary / Corrupt| QUAR["QuarantineRecord Dataclasses<br/>(Preserves Bad JSON + Explicit Reason)"]
+        TF -->|Fail Boundary or Corrupt| QUAR["QuarantineRecord Dataclasses<br/>Preserves Bad JSON + Explicit Reason"]
     end
 
     subgraph T3["Tier 3: Relational Persistence & Idempotency (load.py)"]
         OBS --> LD["AQILoader"]
         QUAR --> LD
         LD -->|Atomic Transaction BEGIN| TX["SQLite Write Engine"]
-        TX -->|Natural Key (city, timestamp_utc)| UPSERT["ON CONFLICT DO UPDATE<br/>(True Idempotency)"]
-        UPSERT --> TBL_OBS[("aqi_observations<br/>(Clean Relational Data)")]
-        TX -->|Append Invalid Data| TBL_QUAR[("aqi_quarantine<br/>(Dead-Letter Audit Table)")]
-        TX -->|Commit / Rollback| AUDIT["Record Pipeline Run Audit<br/>(pipeline_runs Table)"]
+        TX -->|Natural Key: city, timestamp_utc| UPSERT["ON CONFLICT DO UPDATE<br/>True Idempotency"]
+        UPSERT --> TBL_OBS[("aqi_observations<br/>Clean Relational Data")]
+        TX -->|Append Invalid Data| TBL_QUAR[("aqi_quarantine<br/>Dead-Letter Audit Table")]
+        TX -->|Commit or Rollback| AUDIT["Record Pipeline Run Audit<br/>pipeline_runs Table"]
     end
 
     subgraph T4["Tier 4: Intelligence, Analytics & UI (analytics.py, anomaly.py, app.py)"]
@@ -80,34 +80,34 @@ To truly understand the system, trace one real-world observation from New Delhi 
 sequenceDiagram
     autonumber
     participant API as External REST API
-    participant Ext as AQIExtractor (extract.py)
-    participant Trans as AQITransformer (transform.py)
-    participant Load as AQILoader (load.py)
+    participant Ext as AQIExtractor
+    participant Trans as AQITransformer
+    participant Load as AQILoader
     participant DB as SQLite Storage
-    participant ML as IsolationForest (anomaly.py)
-    participant UI as Streamlit UI (app.py)
+    participant ML as IsolationForest
+    participant UI as Streamlit UI
 
-    Ext->>API: GET /v1/air-quality?latitude=28.6139&longitude=77.2090
-    API-->>Ext: 200 OK {"current": {"time": "2026-10-31T22:30", "pm2_5": 95.7, "pm10": 106.2, "us_aqi": 158}}
-    Ext->>Ext: Attach _metadata (extracted_at_utc="2026-10-31T17:00:00Z", source="open-meteo")
-    Ext->>Trans: Send raw payload dict
-    Trans->>Trans: parse_timestamp("2026-10-31T22:30") -> Local IST & UTC (2026-10-31T17:00:00Z)
-    Trans->>Trans: validate_pollutant("pm2_5", 95.7) -> Verify 0.0 <= 95.7 <= 1000.0 (Valid)
-    Trans->>Trans: get_us_aqi_category(158) -> "Unhealthy"
-    Trans->>Load: Emit ObservationRecord(city="New Delhi", pm2_5=95.7, aqi_category="Unhealthy")
-    Load->>DB: Check existence: SELECT 1 FROM aqi_observations WHERE city='New Delhi' AND timestamp_utc='...'
-    alt Exists
-        Load->>DB: UPDATE aqi_observations SET pm2_5=95.7, updated_at=datetime('now') ...
-        Load->>Load: records_updated += 1
+    Ext->>API: GET air-quality telemetry for New Delhi
+    API-->>Ext: 200 OK with pollutant readings
+    Ext->>Ext: Attach extraction metadata
+    Ext->>Trans: Send raw payload dictionary
+    Trans->>Trans: Parse timestamp and convert IST to UTC
+    Trans->>Trans: Validate pollutant physical boundaries
+    Trans->>Trans: Determine US EPA AQI category
+    Trans->>Load: Emit ObservationRecord dataclass
+    Load->>DB: Check composite key existence on city and timestamp_utc
+    alt Record Exists
+        Load->>DB: Execute ON CONFLICT update on observations
+        Load->>Load: Increment records_updated counter
     else New Record
-        Load->>DB: INSERT INTO aqi_observations (...) VALUES (...)
-        Load->>Load: records_inserted += 1
+        Load->>DB: Insert new observation row
+        Load->>Load: Increment records_inserted counter
     end
-    Load->>DB: Commit atomic transaction & write pipeline_runs audit entry
-    DB-->>ML: Query 6-pollutant feature matrix
-    ML->>ML: Standardize features -> Predict anomaly score s(x, n) -> Check PM2.5 <= 1.05 * PM10
-    DB-->>UI: Fetch clean observations
-    UI->>UI: Max AQI = 158 -> Render Red Dynamic Public Health Advisory: "Unhealthy: Wear N95 Mask"
+    Load->>DB: Commit atomic transaction and log pipeline_runs audit entry
+    DB-->>ML: Query standardized multi-pollutant feature matrix
+    ML->>ML: Fit Isolation Forest and verify optical ratio consistency
+    DB-->>UI: Fetch clean observations and metrics
+    UI->>UI: Render interactive map and dynamic health advisory banner
 ```
 
 ---

@@ -54,7 +54,7 @@ graph TD
 
     subgraph Outlier["Atmospheric Outlier (Isolated Near Root)"]
         OUT["x_anomaly (PM2.5=420, PM10=18)"]
-        RootCut["Split 1: Feature PM2.5 > 250 -> Isolated! (Depth = 1)"]
+        RootCut["Split 1: Feature PM2.5 > 250 yields Isolated at Depth 1"]
     end
 ```
 

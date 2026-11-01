@@ -16,9 +16,9 @@ flowchart TD
     B2["Bullet 2: Authored SQL analytics to track regional pollution patterns, atmospheric ratio checks, and data-quality audits."]
     B3["Bullet 3: Detected sensor anomalies using an Isolation Forest, surfaced on a Streamlit dashboard with dynamic health advisories."]
 
-    B1 -->|Interviewer Asks: How?| D1["Defend: Bounded Exponential Backoff, 429 Header, Dead-Letter Quarantine, (city, timestamp_utc) ON CONFLICT DO UPDATE"]
+    B1 -->|Interviewer Asks: How?| D1["Defend: Bounded Exponential Backoff, 429 Header, Dead-Letter Quarantine, Composite Key ON CONFLICT DO UPDATE"]
     B2 -->|Interviewer Asks: Why?| D2["Defend: PM2.5/PM10 Physics Ratios, Diurnal Window Queries, Clean Data Rate Audit Metrics"]
-    B3 -->|Interviewer Asks: Details?| D3["Defend: Path Length Math s(x,n), 6-Pollutant Matrix, Optical Inversion Rules, EPA AQI Breakpoints"]
+    B3 -->|Interviewer Asks: Details?| D3["Defend: Path Length Math Anomaly Score, 6-Pollutant Matrix, Optical Inversion Rules, EPA AQI Breakpoints"]
 ```
 
 ---
