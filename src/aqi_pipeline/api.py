@@ -203,3 +203,4 @@ def create_app(config: Optional[PipelineConfig] = None) -> FastAPI:
 
 # Default application instance for uvicorn
 app = create_app()
+

@@ -142,3 +142,4 @@ def test_api_pipeline_trigger_invalid_mode(seeded_client: TestClient) -> None:
     )
     assert response.status_code == 400
     assert "Invalid execution mode" in response.json()["detail"]
+
