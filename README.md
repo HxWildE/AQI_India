@@ -24,7 +24,8 @@ This project implements an end-to-end data engineering, analytics, and machine l
 - **SQL Trend Analytics**: Automated SQL window functions tracking city pollutant trends, diurnal distributions, regional zonal metrics (North, South, East, West), AQI category distributions, and PM2.5/PM10 physical mass ratios.
 - **ML Anomaly Detection**: Unsupervised `IsolationForest` model (Scikit-learn) isolating multivariate outliers, extreme spikes, and optical sensor baseline inversions.
 - **Interactive Streamlit Dashboard**: Full-stack dark-mode web dashboard (`app.py`) for live monitoring, interactive map filtering, dynamic health advisory banners, and one-click CSV dataset export.
-- **Test-Driven Architecture**: 31 automated unit and integration tests using offline mocks and sanitized fixtures, plus an optional bounded live smoke test.
+- **REST API Gateway**: High-performance ASGI REST service (`api.py`) powered by FastAPI, featuring automatic OpenAPI Swagger documentation (`/docs`), streaming CSV exports, and asynchronous pipeline execution via `BackgroundTasks`.
+- **Test-Driven Architecture**: 40 automated unit and integration tests using offline mocks and sanitized fixtures, plus an optional bounded live smoke test.
 
 ### Resume Bullet Points & Interview Defense
 
@@ -180,7 +181,7 @@ Ingests pre-sanitized historical observations from `tests/fixtures/batch_cities_
 python -m aqi_pipeline.pipeline --mode fixture --show-recent
 ```
 
-### 3. Verify Idempotency
+### 4. Verify Idempotency
 Execute the exact same command a second time:
 
 ```bash
@@ -188,7 +189,7 @@ python -m aqi_pipeline.pipeline --mode fixture --show-recent
 ```
 Notice that `Database Inserts: 0` and `Database Updates: 6`. Total database rows remain unchanged.
 
-### 4. Run in Live Mode (Real External API)
+### 5. Run in Live Mode (Real External API)
 ```bash
 # Ingest live observations for all configured Indian cities:
 python -m aqi_pipeline.pipeline --mode live --show-recent
@@ -197,7 +198,7 @@ python -m aqi_pipeline.pipeline --mode live --show-recent
 python -m aqi_pipeline.pipeline --mode live --cities "New Delhi,Mumbai" --show-recent
 ```
 
-### 5. Run & Export Analytical Dataset to CSV
+### 6. Run & Export Analytical Dataset to CSV
 Export cleaned observations directly to a CSV file for analysis in Jupyter, Excel, or Tableau:
 
 ```bash
@@ -336,7 +337,17 @@ python -m pytest -v
 python -m pytest -v --run-live tests/test_live_smoke.py
 ```
 
-### Verified Test Suite Breakdown (31 Automated + 1 Live Smoke):
+### Verified Test Suite Breakdown (40 Automated + 1 Live Smoke):
+- `tests/test_api.py` (9 Tests):
+  - `test_api_root` (Root service metadata & operational state)
+  - `test_api_health` (Healthcheck & database connectivity)
+  - `test_api_get_observations_unfiltered` (Multi-city JSON observation retrieval)
+  - `test_api_get_observations_filtered_by_city` (City-specific observation querying)
+  - `test_api_analytics_endpoints` (Summary metrics & zonal analytics API endpoints)
+  - `test_api_analytics_export_csv` (Streaming CSV dataset export)
+  - `test_api_anomaly_detect` (Scikit-learn Isolation Forest on-demand execution)
+  - `test_api_pipeline_trigger_success` (Async background batch ETL trigger via `BackgroundTasks`)
+  - `test_api_pipeline_trigger_invalid_mode` (Validation error handling on invalid modes)
 - `tests/test_analytics.py`:
   - `test_analytics_metrics_and_summary` (SQL window aggregations, PM2.5/PM10 ratio logic, data quality health audits)
   - `test_zone_and_category_analytics_and_export` (Zonal regional metrics, AQI category breakdown, top polluted cities, and CSV dataset export)
@@ -406,7 +417,8 @@ AQI_India/
 │   ├── 04_database_deep_dive_sqlite_vs_postgres.md # SQLite internals vs Postgres MVCC
 │   ├── 05_mit_professor_ml_masterclass_isolation_forest.md # Math derivations & optical rules
 │   ├── 06_interview_defense_and_50_qna_bank.md # Resume scripts & 55 direct Q&A bank
-│   └── 07_python_core_and_interview_mastery.md # 50 core Python internals & defense points
+│   ├── 07_python_core_and_interview_mastery.md # 50 core Python internals & defense points
+│   └── 08_api_keys_and_authentication_internals.md # Wire protocols, key hashing, Redis & 4 checks
 ├── tests/
 │   ├── fixtures/
 │   │   ├── batch_cities_response.json   # Multi-city offline test fixture
@@ -432,10 +444,10 @@ AQI_India/
 
 ## 13. Current Limitations & Production Roadmap
 
-- **Storage Engine**: SQLite provides an isolated, portable local database, but is bounded to a single concurrent writer. Migrating to PostgreSQL or Snowflake with connection pooling (`pgbouncer`) would support hundreds of concurrent writers.
-- **Extraction Concurrency**: Ingestion runs sequentially across cities (~4 seconds for 8 cities). An asynchronous worker pool (`asyncio` / `aiohttp`) would scale ingestion to 5,000+ monitoring stations.
+- **Serverless Cloud Deployment**: Deploy to a cloud PostgreSQL database (e.g. Neon Serverless PostgreSQL) with an automated GitHub Actions hourly cron workflow for zero-maintenance 24/7 ingestion.
+- **Agentic AI Root-Cause Investigator**: Implement an autonomous environmental intelligence agent that diagnoses flagged Isolation Forest anomalies using meteorological covariates and synthesizes executive health advisories.
+- **Storage Engine Concurrency**: SQLite provides an isolated, portable local database, but is bounded to a single concurrent writer. Migrating to PostgreSQL or Snowflake with connection pooling (`pgbouncer`) supports high-concurrency ingestion.
 - **Calculated NAQI**: The pipeline currently stores the provider-calculated US AQI (`provider_aqi`). Calculating the official Indian Central Pollution Control Board (CPCB) National AQI requires 24-hour rolling average concentrations, which will be implemented via scheduled aggregation views.
-- **Orchestration**: The pipeline is triggered via a Python CLI or Streamlit UI. In production, this command would be scheduled on an hourly cron schedule via Apache Airflow or Dagster.
 
 ---
 
